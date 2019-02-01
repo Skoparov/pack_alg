@@ -45,19 +45,19 @@ using make_fat_if_flying = std::conditional_t
 	entity_type
 >;
 
-template< typename entity_type >
-struct trait
+template< typename entity_type, typename component_type >
+struct traits
 {
 	template< typename type >
-	struct is_flying
+	struct if_flying
 	{
-		static constexpr bool value{ std::is_same<type, speed>::value && is_flying_v< entity_type > };
+		static constexpr bool value{ std::is_same<type, component_type>::value && is_flying_v< entity_type > };
 	};
 
 	template< typename type >
-	struct is_huge
+	struct if_huge
 	{
-		static constexpr bool value{ std::is_same<type, speed>::value && is_huge_v< entity_type > };
+		static constexpr bool value{ std::is_same<type, component_type>::value && is_huge_v< entity_type > };
 	};
 };
 
@@ -67,8 +67,8 @@ using cripple_if_flying_or_huge_t = remove_types_if_t
 	entity_type,
 	or_
 	<
-		trait< entity_type >::template is_flying,
-		trait< entity_type >::template is_huge
+		traits< entity_type, speed >::template if_flying,
+		traits< entity_type, speed >::template if_huge,
 	>::template type
 >;
 
