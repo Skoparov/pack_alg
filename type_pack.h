@@ -77,6 +77,9 @@ constexpr size_t pack_size_v = pack_size< pack_type >::value;
 
 template< typename pack_type, size_t pos >
 using type_at_pos_t = typename type_at_pos< pack_type, pos >::type;
+	
+template< typename pack_type >
+using end_v = end< pack_type >::value;
 
 template< typename pack_type, typename type, size_t start_pos >
 constexpr size_t first_pos_of_v = first_pos_of< pack_type, type, start_pos >::value;
