@@ -68,7 +68,7 @@ using cripple_if_flying_or_huge_t = remove_types_if_t
 	or_
 	<
 		traits< entity_type, speed >::template if_flying,
-		traits< entity_type, speed >::template if_huge,
+		traits< entity_type, speed >::template if_huge
 	>::template type
 >;
 
