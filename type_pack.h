@@ -167,39 +167,20 @@ struct eval< logical_oper, type >
 	static constexpr bool value{ logical_oper< true, true >::default_value };
 };
 
-template< typename type_to_match,
-	size_t start_pos,
-	size_t curr_pos,
-	typename... types, // empty pack
-	typename std::enable_if_t< sizeof...(types) == 0 >* = nullptr >
-constexpr size_t first_pos_of_helper() noexcept
+struct guard;
+
+template<
+	typename type_to_match,
+	typename curr_type = detail::guard,
+	typename... other_types >
+constexpr size_t first_pos_of(size_t pos, size_t start_pos) noexcept
 {
-	return curr_pos + 1;
+	return
+		((std::is_same<curr_type, type_to_match>::value && pos >= start_pos) ||
+		std::is_same<curr_type, detail::guard>::value) ?
+			pos : first_pos_of<type_to_match, other_types...>(pos + 1, start_pos);
 }
 
-template< typename type_to_match,
-	size_t start_pos,
-	size_t curr_pos,
-	typename curr_type,
-	typename... other_types,
-	typename std::enable_if_t< sizeof...(other_types) == 0 >* = nullptr >
-constexpr size_t first_pos_of_helper() noexcept
-{
-	return std::is_same< curr_type, type_to_match >::value && curr_pos >= start_pos ?
-		curr_pos : curr_pos + 1;
-}
-
-template< typename type_to_match,
-	size_t start_pos,
-	size_t curr_pos,
-	typename curr_type,
-	typename... other_types,
-	typename std::enable_if_t< sizeof...(other_types) != 0 >* = nullptr >
-constexpr size_t first_pos_of_helper() noexcept
-{
-	return std::is_same< curr_type, type_to_match >::value &&  curr_pos >= start_pos ?
-		curr_pos : first_pos_of_helper< type_to_match, start_pos, curr_pos + 1, other_types... >();
-}
 
 template<typename pack_type, template< typename > class predicate, typename result_pack>
 struct remove_types_if_helper;
@@ -311,7 +292,8 @@ template<
 	size_t start_pos >
 struct first_pos_of< pack_type< types... >, type_to_match, start_pos >
 {
-	static constexpr size_t value{ detail::first_pos_of_helper< type_to_match, start_pos, 0, types... >() };
+	static constexpr size_t value{ sizeof...(types) > 0?
+		detail::first_pos_of< type_to_match, types... >(0, start_pos) : 1 };
 };
 
 template< typename pack_type, typename type, size_t pos_to_start >
