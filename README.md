@@ -164,7 +164,7 @@ Holds the type of a predicate that applies ```logical or``` to the results of th
 template< typename predicate >
 struct not_
 ``` 
-Holds the opposite of the value of the provided predicate.
+Holds the type of a predicate that applies ```logical not``` to the result of the specified predicate.
 
 ####  of::fits_any/of::fits_none
 ```
