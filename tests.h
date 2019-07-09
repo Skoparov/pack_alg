@@ -1,8 +1,3 @@
-#ifndef TESTS_H
-#define TESTS_H
-
-#include "type_pack.h"
-
 void test_size()
 {
 	using namespace type_pack;
@@ -118,7 +113,7 @@ void test_predicates()
 {
 	using namespace type_pack;
 
-	static_assert(!not_<always<void>>::value, "");
+	static_assert(!not_<always>::type<void>::value, "");
 
 	static_assert(or_< never, always >::type<void>::value, "");
 	static_assert(or_< never, never, always >::type<void>::value, "");
@@ -131,6 +126,7 @@ void test_predicates()
 	static_assert(!and_< never, always >::type<void>::value, "");
 	static_assert(!and_< never, never, never >::type<void>::value, "");
 	static_assert(!and_< never, always, never >::type<void>::value, "");
-}
 
-#endif
+	static_assert(and_< always, not_<never>::template type >::type<void>::value, "");
+	static_assert(and_< always, or_<always, never>::type, always >::type<void>::value, "");
+}
