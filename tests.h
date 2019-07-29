@@ -1,3 +1,8 @@
+#ifndef TESTS_H	
+#define TESTS_H	
+
+ #include "type_pack.h"
+
 void test_size()
 {
 	using namespace type_pack;
