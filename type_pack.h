@@ -151,11 +151,11 @@ template<bool... vals> struct logic_or
 
 template<bool...> struct bool_seq;
 
-template<template<bool...> class logic_oper, typename pred>
+template<template<bool...> class logic_oper, typename vals>
 struct eval
 {
     template<typename> struct dep_false : std::false_type {};
-    static_assert(dep_false<pred>::value, "Invalid pred type");
+    static_assert(dep_false<vals>::value, "Invalid vals type");
 };
 
 template<template<bool...> class logic_oper, bool... vals>
@@ -233,7 +233,6 @@ struct pack_size
 template<typename pack>
 struct end
 {
-    static_assert(is_type_pack_v<pack>, "pack type is not valid");
     static constexpr size_t value{ pack_size_v<pack> ? pack_size_v<pack> : 1 };
 };
 
@@ -246,7 +245,7 @@ template<
     size_t pos>
 struct type_at_pos<pack<curr_type, other_types...>, pos>
 {
-    static_assert(pos <sizeof...(other_types) + 1, "Type position is out of range");
+    static_assert(pos < sizeof...(other_types) + 1, "Type position is out of range");
     using type = type_at_pos_t<pack<other_types...>, pos - 1>;
 };
 
@@ -257,12 +256,6 @@ template<
 struct type_at_pos<pack<curr_type, other_types...>, 0>
 {
     using type = curr_type;
-};
-
-template<typename pack, size_t pos>
-struct type_at_pos
-{
-    static_assert(is_type_pack_v<pack>, "Pack type is not valid or empty");
 };
 
 // first_pos_of
@@ -277,12 +270,6 @@ struct first_pos_of<pack<types...>, type_to_match, start_pos>
     static constexpr size_t value{ sizeof...(types) > 0?
         detail::first_pos_of<type_to_match, types...>(0, start_pos) : 
         1 };
-};
-
-template<typename pack, typename type, size_t pos_to_start>
-struct first_pos_of
-{
-    static_assert(is_type_pack_v<pack>, "Pack type is not valid");
 };
 
 // has_types
@@ -305,8 +292,7 @@ template<
     typename... types_to_add>
 struct add_types_if<pack<types...>, predicate, types_to_add...>
 {
-    using type = concat_t<pack<types...>, 
-        std::conditional_t<
+    using type = concat_t<pack<types...>, std::conditional_t<
                 predicate<types_to_add>::value,
                 pack<types_to_add>,
                 pack<>>...>;
@@ -326,23 +312,11 @@ struct remove_types_if<pack<types...>, predicate>
         pack<types>>...>;
 };
 
-template<typename invalid_pack, template<typename> class predicate>
-struct remove_types_if
-{
-    static_assert(is_type_pack_v<invalid_pack>, "Pack type is not valid");
-};
-
 // remove_duplicates
 
 template<template<typename...> class pack, typename... types>
 struct remove_duplicates<pack<types...>> :
     detail::remove_duplicates_impl<pack<types...>, pack<>> {};
-
-template<typename invalid_pack>
-struct remove_duplicates
-{
-    static_assert(is_type_pack_v<invalid_pack>, "Pack type is not valid");
-};
 
 // concat
 
@@ -379,7 +353,7 @@ struct invert<pack<curr_type, types...>>
 template<template<typename> class... predicates>
 struct and_
 {
-    // static_assert(sizeof...(predicates) > 1, "At least two predicates should be provided");
+    static_assert(sizeof...(predicates) > 1, "Required at least two predicates");
 
     template<typename type_to_specify>
     using type = detail::eval<
@@ -390,7 +364,7 @@ struct and_
 template<template<typename> class... predicates>
 struct or_
 {
-    // static_assert(sizeof...(predicates) > 1, "At least two predicates should be provided");
+    static_assert(sizeof...(predicates) > 1, "Required at least two predicates");
 
     template<typename type_to_specify>
     using type = detail::eval<
