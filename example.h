@@ -91,10 +91,10 @@ using predator = add_components<creature, damage>;
 static_assert(std::is_same<predator, entity<health, damage>>::value);
 
 using mobile_predator = combine_all<mobile_creature, predator>;
-static_assert(std::is_same<mobile_predator, entity<speed, health, damage>>::value);
+static_assert(std::is_same<mobile_predator, entity<health, speed, damage>>::value);
 
 using flying_predator = add_components<mobile_predator, flying, lightweight>;
-static_assert(std::is_same<flying_predator, entity<speed, health, damage, flying, lightweight>>::value);
+static_assert(std::is_same<flying_predator, entity<health, speed, damage, flying, lightweight>>::value);
 
 using crippled_predator = cripple<mobile_predator>;
 static_assert(std::is_same<crippled_predator, entity<health, damage>>::value);
@@ -106,7 +106,7 @@ using hawk = flying_predator;
 using huge_tiger = make_huge<tiger>;
 
 using fat_eagle = make_fat<eagle>;
-static_assert(std::is_same<fat_eagle, entity<speed, health, damage, fat>>::value);
+static_assert(std::is_same<fat_eagle, entity<health, speed, damage, fat>>::value);
 
 using fat_hawk = make_fat_if_flying<hawk>;
 static_assert(std::is_same<fat_eagle, fat_hawk>::value);
