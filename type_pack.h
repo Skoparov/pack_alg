@@ -188,13 +188,12 @@ template<
     typename curr_type,
     typename... other_types,
     typename... result_types>
-struct remove_duplicates_impl<pack<curr_type, other_types...>, pack<result_types...>>
-{
-    using type = std::conditional_t<
-        has_types_v<pack<result_types...>, curr_type>,
-        typename remove_duplicates_impl<pack<other_types...>, pack<result_types...>>::type,
-        typename remove_duplicates_impl<pack<other_types...>, pack<result_types..., curr_type>>::type>;
-};
+struct remove_duplicates_impl<pack<curr_type, other_types...>, pack<result_types...>> :
+    std::conditional_t<
+            has_types_no_dup_v<pack<result_types...>, curr_type>,
+            remove_duplicates_impl<pack<other_types...>, pack<result_types...>>,
+            remove_duplicates_impl<pack<other_types...>, pack<result_types..., curr_type>>> 
+{};
 
 template<template<typename...> class pack, typename... result_types>
 struct remove_duplicates_impl<pack<>, pack<result_types...>>
