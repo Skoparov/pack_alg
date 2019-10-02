@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <type_traits>
-#include <tuple>
 
 namespace type_pack {
 
@@ -27,6 +26,9 @@ struct first_pos_of; // value = position or end<pack>::value if type not found
 
 template<typename pack, typename... types>
 struct has_types;
+
+template<typename pack, typename... types>
+struct has_types_no_dup;
 
 template<typename pack, template<typename> class predicate, typename... types>
 struct add_types_if;
@@ -61,12 +63,12 @@ template<template<typename> class... predicates>
 struct or_;
 
 template<template<typename> class predicate>
-struct predicate_traits
+struct not_
 {
-    template<typename spec_type>
-    struct not_
+    template<typename type>
+    struct pred
     {
-        static constexpr bool value{ !predicate<spec_type>::value };
+        static constexpr bool value{ !predicate<type>::value };
     };
 };
 
@@ -79,16 +81,22 @@ struct pack_predicates
         static constexpr bool value{ 
             first_pos_of<pack, type>::value != end<pack>::value };
     };
+
+    template<typename type>
+    struct has_type_no_dup
+    {
+        static constexpr bool value{ has_types_no_dup<pack, type>::value };
+    };
 };
 
 template<typename... types>
 struct of
 {
-    template<typename spec_type>
-    using fits_any = has_types<pack<types...>, spec_type>;
+    template<typename type>
+    using fits_any = has_types<pack<types...>, type>;
 
-    template<typename spec_type>
-    using fits_none = typename predicate_traits<fits_any>::template not_<spec_type>;
+    template<typename type>
+    using fits_none = typename not_<fits_any>::template pred<type>;
 };
 
 // convenience typedefs
@@ -110,6 +118,9 @@ constexpr size_t first_pos_of_v = first_pos_of<pack, type, start_pos>::value;
 
 template<typename pack, typename... types>
 constexpr bool has_types_v = has_types<pack, types...>::value;
+
+template<typename pack, typename... types>
+constexpr bool has_types_no_dup_v = has_types_no_dup<pack, types...>::value;
 
 template<typename pack, template<typename> class predicate, typename... types>
 using add_types_if_t = typename add_types_if<pack, predicate, types...>::type;
@@ -149,20 +160,11 @@ template<bool... vals> struct logic_or
     static constexpr bool value{ ( vals || ... ) };
 };
 
-template<bool...> struct bool_seq;
+template<bool... vals>
+constexpr bool logic_and_v = logic_and<vals...>::value;
 
-template<template<bool...> class logic_oper, typename vals>
-struct eval
-{
-    template<typename> struct dep_false : std::false_type {};
-    static_assert(dep_false<vals>::value, "Invalid vals type");
-};
-
-template<template<bool...> class logic_oper, bool... vals>
-struct eval<logic_oper, bool_seq<vals...>>
-{
-    static constexpr bool value{ logic_oper<vals...>::value };
-};
+template<bool... vals>
+constexpr bool logic_or_v = logic_or<vals...>::value;
 
 struct end_guard;
 
@@ -186,17 +188,25 @@ template<
     typename curr_type,
     typename... other_types,
     typename... result_types>
-struct remove_duplicates_impl<pack<curr_type, other_types...>, pack<result_types...>> :
-    std::conditional_t<
-        has_types_v<pack<other_types...>, curr_type>,
-        remove_duplicates_impl<pack<other_types...>, pack<result_types...>>,
-        remove_duplicates_impl<pack<other_types...>, pack<result_types..., curr_type>>> {};
+struct remove_duplicates_impl<pack<curr_type, other_types...>, pack<result_types...>>
+{
+    using type = std::conditional_t<
+        has_types_v<pack<result_types...>, curr_type>,
+        typename remove_duplicates_impl<pack<other_types...>, pack<result_types...>>::type,
+        typename remove_duplicates_impl<pack<other_types...>, pack<result_types..., curr_type>>::type>;
+};
 
 template<template<typename...> class pack, typename... result_types>
 struct remove_duplicates_impl<pack<>, pack<result_types...>>
 {
     using type = pack<result_types...>;
 };
+
+template<typename id>
+struct identity{ using type = id; };
+
+template<typename... types>
+struct inherit : identity<types>... {};
 
 }// detail
 
@@ -277,9 +287,18 @@ struct first_pos_of<pack<types...>, type_to_match, start_pos>
 template<typename pack, typename... types>
 struct has_types
 {
-    static constexpr bool value{ detail::eval<
-      detail::logic_and,
-      detail::bool_seq<pack_predicates<pack>::template has_type<types>::value...>>::value 
+    static constexpr bool value{ detail::logic_and_v<
+        pack_predicates<pack>::template has_type<types>::value...>
+    };
+};
+
+// has_types_no_dup
+
+template<template<typename...> class pack, typename... uniq_types, typename... types>
+struct has_types_no_dup<pack<uniq_types...>, types...>
+{
+    static constexpr bool value{ detail::logic_and_v<
+        std::is_base_of_v<detail::identity<types>, detail::inherit<uniq_types...>>...>
     };
 };
 
@@ -355,10 +374,8 @@ struct and_
 {
     static_assert(sizeof...(predicates) > 1, "Required at least two predicates");
 
-    template<typename type_to_specify>
-    using type = detail::eval<
-        detail::logic_and,
-        detail::bool_seq<predicates<type_to_specify>::value...>>;
+    template<typename spec_type>
+    using type = detail::logic_and<predicates<spec_type>::value...>;
 };
 
 template<template<typename> class... predicates>
@@ -366,10 +383,8 @@ struct or_
 {
     static_assert(sizeof...(predicates) > 1, "Required at least two predicates");
 
-    template<typename type_to_specify>
-    using type = detail::eval<
-        detail::logic_or,
-        detail::bool_seq<predicates<type_to_specify>::value...>>;
+    template<typename spec_type>
+    using type = detail::logic_or<predicates<spec_type>::value...>;
 };
 
 }// type_pack
