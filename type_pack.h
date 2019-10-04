@@ -45,6 +45,9 @@ struct remove_types;
 template<typename pack>
 struct remove_duplicates;
 
+template<typename pack, template<typename> class predicate>
+struct filter;
+
 template<typename... packs>
 struct concat;
 
@@ -99,6 +102,11 @@ struct of
     using fits_none = typename not_<fits_any>::template pred<type>;
 };
 
+template<typename pack> struct from;
+
+template<template<typename...> class pack, typename... types>
+struct from<pack<types...>> : of<types...> {};
+
 // convenience typedefs
 
 template<typename type>
@@ -136,6 +144,9 @@ using remove_types_t = typename remove_types_if<pack, of<types...>::template fit
 
 template<typename pack>
 using remove_duplicates_t = typename remove_duplicates<pack>::type;
+
+template<typename pack, template<typename> class predicate>
+using filter_t = typename filter<pack, predicate>::type;
 
 template<typename... packs>
 using concat_t = typename concat<packs...>::type;
@@ -336,6 +347,17 @@ template<template<typename...> class pack, typename... types>
 struct remove_duplicates<pack<types...>> :
     detail::remove_duplicates_impl<pack<types...>, pack<>> {};
 
+// filter
+
+template<template<typename...> class pack, typename...types, template<typename> class predicate>
+struct filter<pack<types...>, predicate>
+{
+    using type = concat_t<pack<>, std::conditional_t<
+        predicate<types>::value,
+        pack<types>,
+        pack<>>...>;
+};
+
 // concat
 
 template<
@@ -374,7 +396,7 @@ struct and_
     static_assert(sizeof...(predicates) > 1, "Required at least two predicates");
 
     template<typename spec_type>
-    using type = detail::logic_and<predicates<spec_type>::value...>;
+    using pred = detail::logic_and<predicates<spec_type>::value...>;
 };
 
 template<template<typename> class... predicates>
@@ -383,7 +405,7 @@ struct or_
     static_assert(sizeof...(predicates) > 1, "Required at least two predicates");
 
     template<typename spec_type>
-    using type = detail::logic_or<predicates<spec_type>::value...>;
+    using pred = detail::logic_or<predicates<spec_type>::value...>;
 };
 
 }// type_pack
