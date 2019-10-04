@@ -1,5 +1,5 @@
 # type_pack
-A set of C++ type pack helpers
+A set of C++ type pack tools
 
 ####  pack
 ```
@@ -60,6 +60,16 @@ constexpr bool has_types_v = has_types<pack_type, types_to_find...>::value;
 ``` 
 Determines if the specified types are present in the specified pack.
 
+####  has_types_no_dup
+```
+template<typename pack_type, typename... types_to_find>
+struct has_types_no_dup;
+
+template<typename pack_type, typename... types_to_find>
+constexpr bool has_types_no_dup_v = has_types_no_dup<pack_type, types_to_find...>::value;
+``` 
+Determines if the specified types are present in the specified pack in O(1) time. Only applicable if there are no duplicates in type pack.
+
 ####  add_types_if
 ```
 template<typename pack_type, template< typename > class predicate, typename... types_to_add>
@@ -109,6 +119,16 @@ template<typename pack_type>
 using remove_duplicates_t = typename remove_duplicates<pack_type>::type;
 ``` 
 Holds a new pack with no duplicate types.
+
+####  filter
+```
+template<typename pack, template<typename> class predicate>
+struct filter;
+
+template<typename pack, template<typename> class predicate>
+using filter_t = typename filter<pack, predicate>::type;
+``` 
+Creates a pack that holds only those original types that fit the predicate.
 
 ####  concat
 ```
@@ -170,19 +190,12 @@ struct or_;
 ``` 
 Holds the type of a predicate that applies ```logical or``` to the results of the specified predicates.
 
-####  predicate_traits
+####  not_
 ```
 template<template<typename> class predicate>
-struct predicate_traits
-{
-    template<typename spec_type>
-    struct not_
-    {
-        static constexpr bool value{ !predicate<spec_type>::value };
-    };
-};
+struct not_
 ``` 
-Holds the trait of a predicate that applies ```logical not``` to the result of the specified predicate.
+Holds the type of a predicate that applies ```logical not``` to the result of the predicate.
 
 ####  of::fits_any/of::fits_none
 ```
@@ -202,6 +215,14 @@ A predicate 'factory' that holds the types of two convenience predicate template
 
 ```of<types...>::fits_none<type>``` holds true if ```type``` is not found amoung the ```types```
 
+####  from::fits_any/from::fits_none
+```
+template<typename pack>
+struct from
+```
+
+Same as above, but for type pack classes;
+
 ####  pack_predicates
 ```
 template<typename pack>
@@ -213,7 +234,13 @@ struct pack_predicates
         static constexpr bool value{ 
             first_pos_of<pack, type>::value != end<pack>::value };
     };
+
+    template<typename type>
+    struct has_type_no_dup
+    {
+        static constexpr bool value{ has_types_no_dup<pack, type>::value };
+    };
 };
 ```
 
-A predicate 'factory' that holds the ```has_type``` predicate template. 
+A predicate 'factory' that holds the ```has_type``` and ```has_type_no_dup``` template predicates. 
