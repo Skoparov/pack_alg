@@ -23,32 +23,32 @@ Holds the size of the specified type pack.
 ####  end
 ```
 template<typename pack_type>
-struct end; // value = size<pack_type>::value or 1 if pack is empty
+struct end; // pack size + 1
 
-template< typename pack_type >
-using end_v = end< pack_type >::value;
+template<typename pack_type>
+constexpr size_t end_v = end<pack_type>::value;
 ``` 
-Imitates the end() iterator for type packs. Holds either the value of pack_size_v or 1 if the pack is empty.
+Imitates the end() iterator for type packs. Evaluates to size of the pack + 1.
 
 ####  type_at_pos
 ```
 template<typename pack_type, size_t pos>
 struct type_at_pos;
 
-template< typename pack_type, size_t pos>
+template<typename pack_type, size_t pos>
 using type_at_pos_t = typename type_at_pos<pack_type, pos>::type;
 ``` 
 Gets the type at the specified position. If the position is out of range, a static_assert is triggered.
 
 ####  first_pos_of
 ```
-template< typename pack_type, typename type, size_t start_pos = 0 >
-struct first_pos_of; // value = position or end<pack>::value if type not found
+template<typename pack_type, typename type, size_t start_pos = 0>
+struct first_pos_of; // value = position/end_v<pack> if type not found
 
 template<typename pack_type, typename type, size_t start_pos>
-constexpr size_t first_pos_of_v = first_pos_of< pack_type, type, start_pos >::value;
+constexpr size_t first_pos_of_v = first_pos_of<pack_type, type, start_pos>::value;
 ``` 
-Gets the position of the first occurance of the type in the specified type pack. Holds either the found position or end_v
+Finds the position of the first occurance of the type in the type pack. Evaluates to either the found position or end_v
 
 ####  has_types
 ```
@@ -58,7 +58,7 @@ struct has_types;
 template<typename pack_type, typename... types_to_find>
 constexpr bool has_types_v = has_types<pack_type, types_to_find...>::value;
 ``` 
-Determines if the specified types are present in the specified pack.
+Determines whether the specified types are present in the pack.
 
 ####  has_types_no_dup
 ```
@@ -68,27 +68,27 @@ struct has_types_no_dup;
 template<typename pack_type, typename... types_to_find>
 constexpr bool has_types_no_dup_v = has_types_no_dup<pack_type, types_to_find...>::value;
 ``` 
-Determines if the specified types are present in the specified pack in O(1) time. Only applicable if there are no duplicates in type pack.
+Determines whether the specified types are present in the pack in O(1) time. Only applicable if there are no duplicates in the pack.
 
 ####  add_types_if
 ```
-template<typename pack_type, template< typename > class predicate, typename... types_to_add>
+template<typename pack_type, template<typename> class predicate, typename... types_to_add>
 struct add_types_if;
 
-template<typename pack_type, template< typename > class predicate, typename... types_to_add>
+template<typename pack_type, template<typename> class predicate, typename... types_to_add>
 using add_types_if_t = typename add_types_if<pack_type, predicate, types_to_add...>::type;
 ``` 
-Adds the specified types to the specified pack if the predicate is satisfied. 
+Appends the types that satisfy the predicate's condition to the pack.
 
 ####  add_types
 ```
-template<typename pack_type, template< typename > class predicate, typename... types_to_add>
+template<typename pack_type, typename... types_to_add>
 struct add_types;
 
 template<typename pack_type, typename... types_to_add>
 using add_types_t = add_types_if_t<pack_type, always, types_to_add...>;
 ``` 
-Adds the specified types to the pack.
+Unconditionally appends the specified types to the pack.
 
 ####  remove_types_if
 ```
@@ -98,7 +98,7 @@ struct remove_types_if;
 template<typename pack_type, template<typename> class predicate>
 using remove_types_if_t = typename remove_types_if<pack_type, predicate>::type;
 ``` 
-Removes the specified types from the pack if the predicate is satisfied. 
+Removes the types that satisfy the predicate's condition from the pack.
 
 ####  remove_types
 ```
@@ -108,7 +108,7 @@ struct remove_types;
 template<typename pack_type, typename... types_to_remove>
 using remove_types_t = typename remove_types_if<pack_type, of<types_to_remove...>::template fits_any>::type;
 ``` 
-Removes the specified types from the pack.
+Unconditionally removes the specified types from the pack.
 
 ####  remove_duplicates
 ```
@@ -118,7 +118,7 @@ struct remove_duplicates;
 template<typename pack_type>
 using remove_duplicates_t = typename remove_duplicates<pack_type>::type;
 ``` 
-Holds a new pack with no duplicate types.
+Creates a new pack with no duplicate types.
 
 ####  filter
 ```
@@ -128,7 +128,7 @@ struct filter;
 template<typename pack, template<typename> class predicate>
 using filter_t = typename filter<pack, predicate>::type;
 ``` 
-Creates a pack that holds only those original types that fit the predicate.
+Creates a pack comprised of the original types that satisfy the predicate's condition.
 
 ####  concat
 ```
@@ -138,7 +138,7 @@ struct concat;
 template<typename... packs>
 using concat_t = typename concat<packs...>::type;
 ``` 
-Holds the result of the specified packs' concatenation.
+Concatenates several type packs.
 
 ####  invert
 ```
@@ -148,11 +148,11 @@ struct invert;
 template<typename pack>
 using invert_t = typename invert<pack>::type;
 ``` 
-Inverts the type pack(pack<int, double> -> pack<double, int>)
+Inverts the order of types in the type pack (i.e pack<int, double> -> pack<double, int>).
 
 
 ##  Predicates
-A predicates should accept a type as it's first template parameter and define a boolean result value, for example:
+A predicate is a template structure specialized by a type and containing a boolean result value, for example:
 ```
 template<typename type>
 struct is_int
@@ -167,35 +167,35 @@ The following convenience predicates are predefined:
 template<typename> 
 using always = std::true_type;
 ``` 
-Holds true regardless of the type
+Evaluates to true regardless of the type
 
 ####  never
 ```
 template<typename> 
 using never = std::false_type;
 ``` 
-Holds false regardless of the type
+Evaluates to false regardless of the type
 
 ####  and_
 ```
 template< template< typename > class... predicates >
 struct and_;
 ``` 
-Holds the type of a predicate that applies ```logical and``` to the results of the specified predicates.
+Contains a predicate that applies ```logical and``` to the results of the specified predicates.
 
 ####  or_
 ```
 template< template< typename > class... predicates >
 struct or_;
 ``` 
-Holds the type of a predicate that applies ```logical or``` to the results of the specified predicates.
+Contains a predicate that applies ```logical or``` to the results of the specified predicates.
 
 ####  not_
 ```
 template<template<typename> class predicate>
 struct not_
 ``` 
-Holds the type of a predicate that applies ```logical not``` to the result of the predicate.
+Contains a predicate that applies ```logical not``` to the result of the predicate.
 
 ####  of::fits_any/of::fits_none
 ```
@@ -209,7 +209,7 @@ struct of
 	using fits_none = not_<fits_any<type>>;
 };
 ``` 
-A predicate 'factory' that holds the types of two convenience predicate templates. 
+A predicate 'factory' that contains two convenience predicate.
 
 ```of<types...>::fits_any<type>``` holds true if ```type``` is found amoung the ```types```
 
@@ -221,7 +221,7 @@ template<typename pack>
 struct from
 ```
 
-Same as above, but for type pack classes;
+Same as above, but is specialized by type pack classes.
 
 ####  pack_predicates
 ```
@@ -231,16 +231,15 @@ struct pack_predicates
     template<typename type>
     struct has_type
     {
-        static constexpr bool value{ 
-            first_pos_of<pack, type>::value != end<pack>::value };
+        static constexpr bool value{ first_pos_of<pack, type>::value != end_v<pack> };
     };
 
     template<typename type>
     struct has_type_no_dup
     {
-        static constexpr bool value{ has_types_no_dup<pack, type>::value };
+        static constexpr bool value{ has_types_no_dup_v<pack, type> };
     };
 };
 ```
 
-A predicate 'factory' that holds the ```has_type``` and ```has_type_no_dup``` template predicates. 
+A predicate 'factory' that constains ```has_type``` and ```has_type_no_dup``` predicates. 
