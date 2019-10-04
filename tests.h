@@ -28,6 +28,12 @@ void test_has_types()
 	static_assert(!has_types_v<pack<int, int>, bool>);
 	static_assert(!has_types_v<pack<int, int>, bool, int>);
 	static_assert(!has_types_v<pack<>, bool, int>);
+
+    static_assert(has_types_no_dup_v<pack<bool, void, double>, bool>);
+	static_assert(has_types_no_dup_v<pack<bool, void, double>, bool, void, double>);
+	static_assert(!has_types_no_dup_v<pack<int>, bool>);
+	static_assert(!has_types_no_dup_v<pack<int>, bool, int>);
+	static_assert(!has_types_no_dup_v<pack<>, bool, int>);
 }
 
 void test_type_at_pos()
@@ -89,7 +95,7 @@ void test_invert()
 void test_remove_types_if()
 {
     using empty_pack = remove_types_if_t<pack<>, of<int>::fits_any>;
-    static_assert(std::is_same<pack<>, empty_pack>::value);
+    static_assert(std::is_same_v<pack<>, empty_pack>);
 
 	using double_pack = remove_types_if_t<pack<int, double>, of<int>::fits_any>;
 	static_assert(std::is_same_v<double_pack, pack<double>>);
@@ -107,7 +113,7 @@ void test_remove_types_if()
 void test_remove_duplicates()
 {
 	using int_pack = remove_duplicates_t<pack<int, int>>;
-	static_assert(std::is_same<int_pack, pack<int>>::value);
+	static_assert(std::is_same_v<int_pack, pack<int>>);
 
 	using int_double_pack = remove_duplicates_t<pack<int, double, int, double>>;
 	static_assert(std::is_same_v<int_double_pack, pack<int, double>>);
@@ -116,22 +122,35 @@ void test_remove_duplicates()
 	static_assert(std::is_same_v<empty_pack, pack<>>);
 }
 
+void test_filter()
+{
+    using empty_pack = filter_t<pack<>, std::is_arithmetic>;
+    static_assert(std::is_same_v<empty_pack, pack<>>);
+
+    using double_int_pack = filter_t<pack<int, int, pack<>>, std::is_arithmetic>;
+    static_assert(std::is_same_v<double_int_pack, pack<int, int>>);
+
+	using pack_with_pack = 
+        filter_t<pack<int, int, pack<>>, not_<std::is_arithmetic>:: template pred>;
+	static_assert(std::is_same_v<pack_with_pack, pack<pack<>>>);
+}
+
 void test_predicates()
 {
-	static_assert(!predicate_traits<always>::not_<void>::value);
+	static_assert(!not_<always>::pred<void>::value);
 
-	static_assert(or_<never, always>::type<void>::value);
-	static_assert(or_<never, never, always>::type<void>::value);
-	static_assert(!or_<never, never>::type<void>::value);
-	static_assert(!or_<never, never, never>::type<void>::value);
+	static_assert(or_<never, always>::pred<void>::value);
+	static_assert(or_<never, never, always>::pred<void>::value);
+	static_assert(!or_<never, never>::pred<void>::value);
+	static_assert(!or_<never, never, never>::pred<void>::value);
 
-	static_assert(and_<always, always>::type<void>::value);
-	static_assert(and_<always, always, always>::type<void>::value);
-	static_assert(!and_<never, never>::type<void>::value);
-	static_assert(!and_<never, always>::type<void>::value);
-	static_assert(!and_<never, never, never>::type<void>::value);
-	static_assert(!and_<never, always, never>::type<void>::value);
+	static_assert(and_<always, always>::pred<void>::value);
+	static_assert(and_<always, always, always>::pred<void>::value);
+	static_assert(!and_<never, never>::pred<void>::value);
+	static_assert(!and_<never, always>::pred<void>::value);
+	static_assert(!and_<never, never, never>::pred<void>::value);
+	static_assert(!and_<never, always, never>::pred<void>::value);
 
-	static_assert(and_<always, predicate_traits<never>::template not_>::type<void>::value);
-	static_assert(and_<always, or_<always, never>::type, always>::type<void>::value);
+	static_assert(and_<always, not_<never>::template pred>::pred<void>::value);
+	static_assert(and_<always, or_<always, never>::pred, always>::pred<void>::value);
 }
