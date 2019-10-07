@@ -1,5 +1,5 @@
-# type_pack
-A set of C++ type pack tools
+# pack_alg
+A set of C++ type pack algorithms
 
 ####  pack
 ```
@@ -30,25 +30,49 @@ constexpr size_t end_v = end<pack_type>::value;
 ``` 
 Imitates the end() iterator for type packs. Evaluates to size of the pack + 1.
 
-####  type_at_pos
+####  type_at
 ```
 template<typename pack_type, size_t pos>
-struct type_at_pos;
+struct type_at;
 
 template<typename pack_type, size_t pos>
-using type_at_pos_t = typename type_at_pos<pack_type, pos>::type;
+using type_at_t = typename type_at<pack_type, pos>::type;
 ``` 
 Gets the type at the specified position. If the position is out of range, a static_assert is triggered.
 
-####  first_pos_of
+####  find_if
 ```
-template<typename pack_type, typename type, size_t start_pos = 0>
-struct first_pos_of; // value = position/end_v<pack> if type not found
+template<typename pack, template<typename> class pred, size_t start_pos = 0>
+struct find_if; 
 
-template<typename pack_type, typename type, size_t start_pos>
-constexpr size_t first_pos_of_v = first_pos_of<pack_type, type, start_pos>::value;
+template<typename pack, template<typename> class pred, size_t start_pos = 0>
+constexpr size_t find_if_v = find_if<pack, pred, start_pos>::value;
 ``` 
-Finds the position of the first occurance of the type in the type pack. Evaluates to either the found position or end_v
+Finds the position of a first type satisfying the predicate. Evaluates to either the found position or end_v
+
+####  find
+```
+template<typename pack, typename type, size_t start_pos = 0>
+constexpr size_t find_v = find_if_v<pack, of<type>::template fits_any_no_dup, start_pos>;
+``` 
+Finds the position of the first occurance of the type in the pack. Evaluates to either the found position or end_v
+
+####  enumerate_if
+```
+template<typename pack, template<typename> class pred>
+struct enumerate_if; // value = index_sequence<idxs of types satisfying pred...>
+
+template<typename pack, template<typename> class pred>
+using enumerate_if_t = typename enumerate_if<pack, pred>::type;
+``` 
+Constructs an index sequence for types satisfying the predicate.
+
+####  enumerate_if
+```
+template<typename pack, typename type>
+using enumerate_t = typename enumerate_if<pack, of<type>:: template fits_any_no_dup>::type;
+``` 
+Constructs an index sequence for types same as the provided type.
 
 ####  has_types
 ```
@@ -83,9 +107,6 @@ Appends the types that satisfy the predicate's condition to the pack.
 ####  add_types
 ```
 template<typename pack_type, typename... types_to_add>
-struct add_types;
-
-template<typename pack_type, typename... types_to_add>
 using add_types_t = add_types_if_t<pack_type, always, types_to_add...>;
 ``` 
 Unconditionally appends the specified types to the pack.
@@ -103,20 +124,17 @@ Removes the types that satisfy the predicate's condition from the pack.
 ####  remove_types
 ```
 template<typename pack_type, typename... types_to_remove>
-struct remove_types;
-
-template<typename pack_type, typename... types_to_remove>
 using remove_types_t = typename remove_types_if<pack_type, of<types_to_remove...>::template fits_any>::type;
 ``` 
 Unconditionally removes the specified types from the pack.
 
-####  remove_duplicates
+####  unique
 ```
 template<typename pack_type>
-struct remove_duplicates;
+struct unique;
 
 template<typename pack_type>
-using remove_duplicates_t = typename remove_duplicates<pack_type>::type;
+using unique_t = typename unique<pack_type>::type;
 ``` 
 Creates a new pack with no duplicate types.
 
@@ -202,18 +220,24 @@ Contains a predicate that applies ```logical not``` to the result of the predica
 template<typename... types>
 struct of
 {
-	template<typename type>
-	using fits_any = has_types<pack<types...>, type>;
+    template<typename type>
+    using fits_any = has_types<pack<types...>, type>;
 
-	template<typename type>
-	using fits_none = not_<fits_any<type>>;
+    template<typename type>
+    using fits_any_no_dup = has_types_no_dup<pack<types...>, type>;
+
+    template<typename type>
+    using fits_none = typename not_<fits_any>::template pred<type>;
+
+    template<typename type>
+    using fits_none_no_dup = typename not_<fits_any_no_dup>::template pred<type>;
 };
 ``` 
 A predicate 'factory' that contains two convenience predicate.
 
-```of<types...>::fits_any<type>``` holds true if ```type``` is found amoung the ```types```
+```of<types...>::fits_any(_no_dup)<type>``` holds true if ```type``` is found amoung the ```types```
 
-```of<types...>::fits_none<type>``` holds true if ```type``` is not found amoung the ```types```
+```of<types...>::fits_none(_no_dup)<type>``` holds true if ```type``` is not found amoung the ```types```
 
 ####  from::fits_any/from::fits_none
 ```
@@ -222,24 +246,3 @@ struct from
 ```
 
 Same as above, but is specialized by type pack classes.
-
-####  pack_predicates
-```
-template<typename pack>
-struct pack_predicates
-{
-    template<typename type>
-    struct has_type
-    {
-        static constexpr bool value{ first_pos_of<pack, type>::value != end_v<pack> };
-    };
-
-    template<typename type>
-    struct has_type_no_dup
-    {
-        static constexpr bool value{ has_types_no_dup_v<pack, type> };
-    };
-};
-```
-
-A predicate 'factory' that constains ```has_type``` and ```has_type_no_dup``` predicates. 

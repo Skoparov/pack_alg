@@ -1,3 +1,6 @@
+#pragma once
+#include "type_pack.h"
+
 struct body_type_related {};
 struct size_related {};
 struct movement_related {};
@@ -14,13 +17,13 @@ struct fat : body_type_related {};
 template<typename... components> struct entity;
 
 template<typename entity_type, typename... components>
-using add_components = remove_duplicates_t<add_types_t<entity_type, components...>>;
+using add_components = unique_t<add_types_t<entity_type, components...>>;
 
 template<typename entity_type, template<typename> class predicate>
 using get_components_if = filter_t<entity_type, predicate>;
 
 template<typename... entity_types>
-using combine_all = remove_duplicates_t<concat_t<entity_types...>>;
+using combine_all = unique_t<concat_t<entity_types...>>;
 
 template<typename entity_type>
 constexpr bool is_flying_v = has_types_no_dup_v<entity_type, flying, lightweight>;
