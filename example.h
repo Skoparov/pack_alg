@@ -1,6 +1,8 @@
 #pragma once
 #include "type_pack.h"
 
+using namespace pack_alg;
+
 struct body_type_related {};
 struct size_related {};
 struct movement_related {};
@@ -19,7 +21,7 @@ template<typename... components> struct entity;
 template<typename entity_type, typename... components>
 using add_components = unique_t<add_types_t<entity_type, components...>>;
 
-template<typename entity_type, template<typename> class predicate>
+template<typename entity_type, typename predicate>
 using get_components_if = filter_t<entity_type, predicate>;
 
 template<typename... entity_types>
@@ -35,7 +37,7 @@ template<typename entity_type>
 using cripple = remove_types_t<entity_type, speed>;
 
 template<typename entity_type>
-using make_fat = add_types_t<remove_types_if_t<entity_type, of<flying, lightweight>::fits_any>, fat>;
+using make_fat = add_types_t<remove_types_if_t<entity_type, any_of<flying, lightweight>>, fat>;
 
 template<typename entity_type>
 using make_huge = add_types_t<entity_type, huge>;
@@ -43,40 +45,37 @@ using make_huge = add_types_t<entity_type, huge>;
 template<typename entity_type>
 using make_fat_if_flying = std::conditional_t
 <
-	is_flying_v<entity_type>,
-	make_fat<entity_type>,
-	entity_type
+    is_flying_v<entity_type>,
+    make_fat<entity_type>,
+    entity_type
 >;
 
-template<typename component>
-using is_body_type_related = std::is_base_of<body_type_related, component>;
-
-template<typename component>
-using is_size_related = std::is_base_of<size_related, component>;
+using is_body_type_related = std::is_base_of<body_type_related, _1>;
+using is_size_related = std::is_base_of<size_related, _1>;
 
 template<typename entity>
 using get_body_type_and_size_related = get_components_if<
     entity,
-    or_<is_body_type_related, is_size_related>:: template pred>;
+    or_<is_body_type_related, is_size_related>>;
 
 //
 
 using creature = entity<health>;
 
 using mobile_creature = add_components<creature, speed>;
-static_assert(std::is_same<mobile_creature, entity<health, speed>>::value);
+static_assert(std::is_same_v<mobile_creature, entity<health, speed>>);
 
 using predator = add_components<creature, damage>;
-static_assert(std::is_same<predator, entity<health, damage>>::value);
+static_assert(std::is_same_v<predator, entity<health, damage>>);
 
 using mobile_predator = combine_all<mobile_creature, predator>;
-static_assert(std::is_same<mobile_predator, entity<health, speed, damage>>::value);
+static_assert(std::is_same_v<mobile_predator, entity<health, speed, damage>>);
 
 using flying_predator = add_components<mobile_predator, flying, lightweight>;
-static_assert(std::is_same<flying_predator, entity<health, speed, damage, flying, lightweight>>::value);
+static_assert(std::is_same_v<flying_predator, entity<health, speed, damage, flying, lightweight>>);
 
 using crippled_predator = cripple<mobile_predator>;
-static_assert(std::is_same<crippled_predator, entity<health, damage>>::value);
+static_assert(std::is_same_v<crippled_predator, entity<health, damage>>);
 
 using tiger = mobile_predator;
 using eagle = flying_predator;
@@ -86,13 +85,13 @@ using huge_tiger = make_huge<tiger>;
 using huge_fat_tiger = make_fat<huge_tiger>;
 
 using fat_eagle = make_fat<eagle>;
-static_assert(std::is_same<fat_eagle, entity<health, speed, damage, fat>>::value);
+static_assert(std::is_same_v<fat_eagle, entity<health, speed, damage, fat>>);
 
 using fat_hawk = make_fat_if_flying<hawk>;
-static_assert(std::is_same<fat_eagle, fat_hawk>::value);
+static_assert(std::is_same_v<fat_eagle, fat_hawk>);
 
 using fit_tiger = make_fat_if_flying<tiger>;
-static_assert(std::is_same<tiger, fit_tiger>::value);
+static_assert(std::is_same_v<tiger, fit_tiger>);
 
-using body_type_and_size_related = get_body_type_and_size_related<huge_fat_tiger>;
-static_assert(std::is_same<body_type_and_size_related, entity<huge, fat>>::value);
+using huge_and_fat = get_body_type_and_size_related<huge_fat_tiger>;
+static_assert(std::is_same_v<huge_and_fat, entity<huge, fat>>);

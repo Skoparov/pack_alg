@@ -20,19 +20,20 @@ void test_find()
     static_assert(find_v<pack<bool, void, bool>, float> == 3);
     static_assert(find_v<pack<>, float> == 1);
 
-    static_assert(find_if_v<pack<void, int, bool>, std::is_arithmetic> == 1);
-    static_assert(find_if_v<pack<void, int, bool>, std::is_arithmetic, 2> == 2);
+    static_assert(find_if_v<pack<void, int, bool>, std::is_arithmetic<_1>> == 1);
+    static_assert(find_if_v<pack<void, int, bool>, std::is_arithmetic<_1>, 2> == 2);
 }
+
 
 void test_enumerate_if()
 {
-    using arithm_seq = enumerate_if_t<pack<void, int, void, double>, std::is_arithmetic>;
+    using arithm_seq = enumerate_if_t<pack<void, int, void, double>, std::is_arithmetic<_1>>;
     static_assert(std::is_same_v<arithm_seq, std::index_sequence<1, 3>>);
 
-    using class_seq = enumerate_if_t<pack<void, int, void, double>, std::is_class>;
+    using class_seq = enumerate_if_t<pack<void, int, void, double>, std::is_class<_1>>;
     static_assert(std::is_same_v<class_seq, std::index_sequence<>>);
 
-    using empty_pack = enumerate_if_t<pack<>, std::is_arithmetic>;
+    using empty_pack = enumerate_if_t<pack<>, std::is_arithmetic<_1>>;
     static_assert(std::is_same_v<empty_pack, std::index_sequence<>>);
 
     using int_idx_pack = enumerate_t<pack<int, void, int>, int>;
@@ -65,19 +66,19 @@ void test_type_at()
 
 void test_add_types_if()
 {
-    using int_double_pack = add_types_if_t<pack<>, of<int, double>::fits_any, int, double>;
+    using int_double_pack = add_types_if_t<pack<>, any_of<int, double>, int, double>;
     static_assert(std::is_same_v<int_double_pack, pack<int, double>>);
 
-    using empty_pack = add_types_if_t<pack<>, of<int, double>::fits_none, int, double>;
+    using empty_pack = add_types_if_t<pack<>, none_of<int, double>, int, double>;
     static_assert(std::is_same_v<empty_pack, pack<>>);
 
-    using int_pack = add_types_if_t<pack<>, of<int>::fits_any, int, double>;
+    using int_pack = add_types_if_t<pack<>, any_of<int>, int, double>;
     static_assert(std::is_same_v<int_pack, pack<int>>);
 
-    using int_double_int_pack = add_types_if_t<pack<int, double>, of<int>::fits_any, int>;
+    using int_double_int_pack = add_types_if_t<pack<int, double>, any_of<int>, int>;
     static_assert(std::is_same_v<int_double_int_pack, pack<int, double, int>>);
 
-    using empty_pack2 = add_types_if_t<pack<>, of<int>::fits_any>;
+    using empty_pack2 = add_types_if_t<pack<>, any_of<int>>;
     static_assert(std::is_same_v<empty_pack2, pack<>>);
 
     using int_double_pack2 = add_types_t<pack<>, int, double>;
@@ -101,6 +102,7 @@ void test_concat()
     static_assert(std::is_same_v<void_int_double_pack2, pack<void, int, double>>);
 }
 
+
 void test_invert()
 {
     static_assert(std::is_same_v<pack<>, invert_t<pack<>>>);
@@ -112,16 +114,16 @@ void test_invert()
 
 void test_remove_types_if()
 {
-    using empty_pack = remove_types_if_t<pack<>, of<int>::fits_any>;
+    using empty_pack = remove_types_if_t<pack<>, any_of<int>>;
     static_assert(std::is_same_v<pack<>, empty_pack>);
 
-    using double_pack = remove_types_if_t<pack<int, double>, of<int>::fits_any>;
+    using double_pack = remove_types_if_t<pack<int, double>, any_of<int>>;
     static_assert(std::is_same_v<double_pack, pack<double>>);
 
-    using empty_pack = remove_types_if_t<pack<int, double>, of<int, double>::fits_any>;
+    using empty_pack = remove_types_if_t<pack<int, double>, any_of<int, double>>;
     static_assert(std::is_same_v<empty_pack, pack<>>);
 
-    using int_double_pack = remove_types_if_t<pack<int, double>, of<int, double>::fits_none>;
+    using int_double_pack = remove_types_if_t<pack<int, double>, none_of<int, double>>;
     static_assert(std::is_same_v<int_double_pack, pack<int, double>>);
 
     using empty_pack2 = remove_types_t<pack<int, double>, int, double>;
@@ -140,35 +142,30 @@ void test_unique()
     static_assert(std::is_same_v<empty_pack, pack<>>);
 }
 
-void test_filter()
-{
-    using empty_pack = filter_t<pack<>, std::is_arithmetic>;
-    static_assert(std::is_same_v<empty_pack, pack<>>);
-
-    using double_int_pack = filter_t<pack<int, int, pack<>>, std::is_arithmetic>;
-    static_assert(std::is_same_v<double_int_pack, pack<int, int>>);
-
-    using pack_with_pack = 
-        filter_t<pack<int, int, pack<>>, not_<std::is_arithmetic>:: template pred>;
-    static_assert(std::is_same_v<pack_with_pack, pack<pack<>>>);
-}
-
 void test_predicates()
 {
-    static_assert(!not_<always>::pred<void>::value);
+    using namespace detail;
 
-    static_assert(or_<never, always>::pred<void>::value);
-    static_assert(or_<never, never, always>::pred<void>::value);
-    static_assert(!or_<never, never>::pred<void>::value);
-    static_assert(!or_<never, never, never>::pred<void>::value);
+    static_assert(!eval_v<not_<always>>);
+    static_assert(eval_v<not_<not_<always>>>);
 
-    static_assert(and_<always, always>::pred<void>::value);
-    static_assert(and_<always, always, always>::pred<void>::value);
-    static_assert(!and_<never, never>::pred<void>::value);
-    static_assert(!and_<never, always>::pred<void>::value);
-    static_assert(!and_<never, never, never>::pred<void>::value);
-    static_assert(!and_<never, always, never>::pred<void>::value);
+    static_assert(eval_v<or_<never, always>>);
+    static_assert(eval_v<or_<never, never, always>>);
+    static_assert(eval_v<not_<or_<never, never>>>);
+    static_assert(eval_v<not_<or_<never, never, never>>>);
 
-    static_assert(and_<always, not_<never>::template pred>::pred<void>::value);
-    static_assert(and_<always, or_<always, never>::pred, always>::pred<void>::value);
+    static_assert(eval_v<and_<always, always>>);
+    static_assert(eval_v<and_<always, always, always>>);
+    static_assert(eval_v<not_<and_<never, never>>>);
+    static_assert(eval_v<not_<and_<never, always>>>);
+    static_assert(eval_v<not_<and_<never, never, never>>>);
+    static_assert(eval_v<not_<and_<never, always, never>>>);
+
+    static_assert(eval_v<and_<always, not_<never>>>);
+    static_assert(eval_v<and_<always, or_<always, never>, always>>);
+    static_assert(eval_v<and_<always, or_<always, never>, always>>);
+
+    using is_numeric_and_pod = and_<std::is_arithmetic<_1>, std::is_pod<_1>>;
+    static_assert(eval_v<is_numeric_and_pod, int>);
+    static_assert(eval_v<not_<is_numeric_and_pod>, void>);
 }
