@@ -165,6 +165,27 @@ using invert_t = typename invert<pack>::type;
 ``` 
 Inverts the order of types in the type pack (i.e pack<int, double> -> pack<double, int>).
 
+####  transform
+```
+template<typename pack, typename type_predicate>
+struct transform;
+
+template<typename pack, typename type_predicate>
+using transform_t = typename transform<pack, type_predicate>::type;
+``` 
+Transform the types in the type pack into types yielded by the type predicate.
+Placeholders can be used to specialize template type predicates.
+The predicate will be specialized by each type in the pack, so it should not have more that one placeholder.
+The algorightm supports predicate nesting:
+```
+using const_int_pack = transform_t<pack<int>, std::add_pointer<std::add_const<_1>>>; // pack<const int*>
+```
+If the predicate contains a 'type' typedef(like the one above), it will be used as the evaluation result, otherwise the predicate type itself
+will be used, replacing all types in the pack:
+```
+using double_pack = transform_t<pack<int>, double>; // pack<double>
+```
+
 ##  Predicates
 
 A predicate is a template structure fully specialized by types/placeholders and containing a boolean value:

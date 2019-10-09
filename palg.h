@@ -1,11 +1,11 @@
-#ifndef PACK_ALG_H
-#define PACK_ALG_H
+#ifndef PALG_H
+#define PALG_H
 
 #include <cstddef>
 #include <utility>
 #include <type_traits>
 
-namespace pack_alg {
+namespace palg {
 
 template<typename... types>
 struct pack {}; // default pack definition provided for convenience
@@ -45,6 +45,9 @@ struct concat;
 
 template<typename pack>
 struct invert;
+
+template<typename pack, typename type_predicate>
+struct transform;
 
 // predicates
 
@@ -132,6 +135,9 @@ using concat_t = typename concat<packs...>::type;
 template<typename pack>
 using invert_t = typename invert<pack>::type;
 
+template<typename pack, typename type_predicate>
+using transform_t = typename transform<pack, type_predicate>::type;
+
 ///////
 // impl
 ///////
@@ -147,56 +153,100 @@ struct with_args;
 
 template<
     template<typename...> class pred,
-    typename type, typename... tail,
+    typename curr, typename... tail,
     typename... result,
     typename arg, typename...args>
-struct with_args<pred, pack<type, tail...>, pack<result...>, arg, args...>
+struct with_args<pred, pack<curr, tail...>, pack<result...>, arg, args...>
 {
-    static constexpr bool value{ std::conditional_t<
-        std::is_same_v<type, placeholder>,
+    using type = typename std::conditional_t<
+        std::is_same_v<curr, placeholder>,
         with_args<pred, pack<tail...>, pack<result..., arg>, args...>,
-        with_args<pred, pack<tail...>, pack<result..., type>, arg, args...>>::value };
+        with_args<pred, pack<tail...>, pack<result..., curr>, arg, args...>>::type;
 };
 
 template<template<typename...> class pred, typename... tail, typename... result>
 struct with_args<pred, pack<tail...>, pack<result...>>
 {
-    static constexpr bool value{ pred<result..., tail...>::value };
+    using type = pred<result..., tail...>;
 };
 
+template<
+    template<typename...> class pred,
+    typename... result,
+    typename arg, typename... args>
+struct with_args<pred, pack<>, pack<result...>, arg, args...>
+{
+    using type = pred<result...>;
+};
+
+template<template<typename...> class pred, typename types, typename... args>
+using with_args_t = typename with_args<pred, types, pack<>, args...>::type;
+
 template<typename pred, typename... args>
-struct eval
+struct eval_value
 {
     static constexpr bool value{ pred::value };
 };
 
 template<template<typename...> class pred, typename... types, typename... args>
-struct eval<pred<types...>, args...>
+struct eval_value<pred<types...>, args...>
 {
-    static constexpr bool value{ 
-        with_args<pred, pack<types...>, pack<>, args...>::value };
+    static constexpr bool value{ with_args_t<pred, pack<types...>, args...>::value };
 };
 
 template<typename... preds, typename... args>
-struct eval<and_<preds...>, args...>
+struct eval_value<and_<preds...>, args...>
 {
-    static constexpr bool value{ std::conjunction_v<eval<preds, args...>...> };
+    static constexpr bool value{ std::conjunction_v<eval_value<preds, args...>...> };
 };
 
 template<typename... preds, typename... args>
-struct eval<or_<preds...>, args...>
+struct eval_value<or_<preds...>, args...>
 {
-    static constexpr bool value{ std::disjunction_v<eval<preds, args...>...> };
+    static constexpr bool value{ std::disjunction_v<eval_value<preds, args...>...> };
 };
 
 template<typename pred, typename... args>
-struct eval<not_<pred>, args...>
+struct eval_value<not_<pred>, args...>
 {
-    static constexpr bool value{ !eval<pred, args...>::value };
+    static constexpr bool value{ !eval_value<pred, args...>::value };
 };
 
 template<typename pred, typename... args>
-constexpr bool eval_v = eval<pred, args...>::value;
+constexpr bool eval_v = eval_value<pred, args...>::value;
+
+template<typename regular, typename = void>
+struct extract_type
+{
+    using type = regular;
+};
+
+template<typename pred>
+struct extract_type<pred, std::void_t<typename pred::type>>
+{
+    using type = typename pred::type;
+};
+
+template<typename pred, typename arg>
+struct eval_type
+{
+    using type = std::conditional_t<
+        std::is_same_v<pred, placeholder>,
+        arg,
+        typename extract_type<pred>::type>;
+};
+
+template<template<typename...> class pred, typename... types, typename arg>
+struct eval_type<pred<types...>, arg>
+{
+    using type = typename with_args_t<
+            pred,
+            pack<typename eval_type<types, arg>::type...>,
+            arg>::type;
+};
+
+template<typename pred, typename arg>
+using eval_t = typename eval_type<pred, arg>::type;
 
 struct end_guard;
 
@@ -420,6 +470,14 @@ struct invert<pack<curr_type, types...>>
     using type = concat_t<typename invert<pack<types...>>::type, pack<curr_type>>;
 };
 
-}// pack_alg
+// transform
+
+template<template<typename...> class pack, typename... types, typename type_pred>
+struct transform<pack<types...>, type_pred>
+{
+    using type = pack<detail::eval_t<type_pred, types>...>;
+};
+
+}// palg
 
 #endif

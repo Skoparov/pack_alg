@@ -1,7 +1,7 @@
 #pragma once
-#include "type_pack.h"
+#include "palg.h"
 
-using namespace pack_alg;
+using namespace palg;
 
 struct body_type_related {};
 struct size_related {};
@@ -43,12 +43,10 @@ template<typename entity_type>
 using make_huge = add_types_t<entity_type, huge>;
 
 template<typename entity_type>
-using make_fat_if_flying = std::conditional_t
-<
+using make_fat_if_flying = std::conditional_t<
     is_flying_v<entity_type>,
     make_fat<entity_type>,
-    entity_type
->;
+    entity_type>;
 
 using is_body_type_related = std::is_base_of<body_type_related, _1>;
 using is_size_related = std::is_base_of<size_related, _1>;

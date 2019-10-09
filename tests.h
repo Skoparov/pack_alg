@@ -1,8 +1,8 @@
 #pragma once
 
-#include "type_pack.h"
+#include "palg.h"
 
-using namespace pack_alg;
+using namespace palg;
 
 void test_size()
 {
@@ -123,6 +123,9 @@ void test_remove_types_if()
     using empty_pack = remove_types_if_t<pack<int, double>, any_of<int, double>>;
     static_assert(std::is_same_v<empty_pack, pack<>>);
 
+    using empty_pack2 = remove_types_if_t<pack<int, double>, std::is_arithmetic<_1>>;
+    static_assert(std::is_same_v<empty_pack2, pack<>>);
+
     using int_double_pack = remove_types_if_t<pack<int, double>, none_of<int, double>>;
     static_assert(std::is_same_v<int_double_pack, pack<int, double>>);
 
@@ -140,6 +143,21 @@ void test_unique()
 
     using empty_pack = unique_t<pack<>>;
     static_assert(std::is_same_v<empty_pack, pack<>>);
+}
+
+void test_transform()
+{
+    using int_pack = pack<int, int>;
+    static_assert(std::is_same_v<pack<>, transform_t<pack<>, std::add_pointer<_1>>>);
+
+    using double_pack = transform_t<int_pack, double>;
+    static_assert(std::is_same_v<double_pack, pack<double, double>>);
+    
+    using int_ptr_pack = transform_t<int_pack, std::add_pointer<_1>>;
+    static_assert(std::is_same_v<int_ptr_pack, pack<int*, int*>>);
+
+    using const_int_pack = transform_t<int_pack, std::add_pointer<std::add_const<_1>>>;
+    static_assert(std::is_same_v<const_int_pack, pack<const int*, const int*>>);
 }
 
 void test_predicates()
