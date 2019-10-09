@@ -19,7 +19,7 @@ struct fat : body_type_related {};
 template<typename... components> struct entity;
 
 template<typename entity_type, typename... components>
-using add_components = unique_t<add_types_t<entity_type, components...>>;
+using add_components = unique_t<append_t<entity_type, components...>>;
 
 template<typename entity_type, typename predicate>
 using get_components_if = filter_t<entity_type, predicate>;
@@ -37,10 +37,10 @@ template<typename entity_type>
 using cripple = remove_types_t<entity_type, speed>;
 
 template<typename entity_type>
-using make_fat = add_types_t<remove_types_if_t<entity_type, any_of<flying, lightweight>>, fat>;
+using make_fat = append_t<remove_types_if_t<entity_type, any_of<flying, lightweight>>, fat>;
 
 template<typename entity_type>
-using make_huge = add_types_t<entity_type, huge>;
+using make_huge = append_t<entity_type, huge>;
 
 template<typename entity_type>
 using make_fat_if_flying = std::conditional_t<

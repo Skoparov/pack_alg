@@ -1,5 +1,4 @@
 #pragma once
-
 #include "palg.h"
 
 using namespace palg;
@@ -23,7 +22,6 @@ void test_find()
     static_assert(find_if_v<pack<void, int, bool>, std::is_arithmetic<_1>> == 1);
     static_assert(find_if_v<pack<void, int, bool>, std::is_arithmetic<_1>, 2> == 2);
 }
-
 
 void test_enumerate_if()
 {
@@ -62,26 +60,50 @@ void test_type_at()
 
     using double_type = type_at_t<pack<void, double>, 1>;
     static_assert(std::is_same_v<double_type, double>);
+
+    static_assert(std::is_same_v<front_t<pack<void, double>>, void>);
+    static_assert(std::is_same_v<back_t<pack<void, double>>, double>);
 }
 
-void test_add_types_if()
+void test_append()
 {
-    using int_double_pack = add_types_if_t<pack<>, any_of<int, double>, int, double>;
+    using int_double_pack = append_if_t<pack<>, any_of<int, double>, int, double>;
     static_assert(std::is_same_v<int_double_pack, pack<int, double>>);
 
-    using empty_pack = add_types_if_t<pack<>, none_of<int, double>, int, double>;
+    using empty_pack = append_if_t<pack<>, none_of<int, double>, int, double>;
     static_assert(std::is_same_v<empty_pack, pack<>>);
 
-    using int_pack = add_types_if_t<pack<>, any_of<int>, int, double>;
+    using int_pack = append_if_t<pack<>, any_of<int>, int, double>;
     static_assert(std::is_same_v<int_pack, pack<int>>);
 
-    using int_double_int_pack = add_types_if_t<pack<int, double>, any_of<int>, int>;
+    using int_double_int_pack = append_if_t<pack<int, double>, any_of<int>, int>;
     static_assert(std::is_same_v<int_double_int_pack, pack<int, double, int>>);
 
-    using empty_pack2 = add_types_if_t<pack<>, any_of<int>>;
+    using empty_pack2 = append_if_t<pack<>, any_of<int>>;
     static_assert(std::is_same_v<empty_pack2, pack<>>);
 
-    using int_double_pack2 = add_types_t<pack<>, int, double>;
+    using int_double_pack2 = append_t<pack<>, int, double>;
+    static_assert(std::is_same_v<int_double_pack2, pack<int, double>>);
+}
+
+void test_prepend()
+{
+    using int_double_pack = prepend_if_t<pack<>, any_of<int, double>, int, double>;
+    static_assert(std::is_same_v<int_double_pack, pack<int, double>>);
+
+    using empty_pack = prepend_if_t<pack<>, none_of<int, double>, int, double>;
+    static_assert(std::is_same_v<empty_pack, pack<>>);
+
+    using int_pack = prepend_if_t<pack<>, any_of<int>, int, double>;
+    static_assert(std::is_same_v<int_pack, pack<int>>);
+
+    using int_double_int_pack = prepend_if_t<pack<int, double>, any_of<int>, int>;
+    static_assert(std::is_same_v<int_double_int_pack, pack<int, int, double>>);
+
+    using empty_pack2 = prepend_if_t<pack<>, any_of<int>>;
+    static_assert(std::is_same_v<empty_pack2, pack<>>);
+
+    using int_double_pack2 = prepend_t<pack<>, int, double>;
     static_assert(std::is_same_v<int_double_pack2, pack<int, double>>);
 }
 

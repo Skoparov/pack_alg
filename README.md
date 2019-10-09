@@ -1,5 +1,5 @@
-# pack_alg
-A set of C++ type pack algorithms.
+# Palg
+A collection of C++ compile time algorithms.
 
 ####  pack
 ```
@@ -12,33 +12,53 @@ A basic type pack struct provided for convenience.
 
 ####  pack_size
 ```
-template<typename pack_type>
+template<typename pack>
 struct pack_size;
 
-template<typename pack_type>
-constexpr size_t pack_size_v = pack_size<pack_type>::value;
+template<typename pack>
+constexpr size_t pack_size_v = pack_size<pack>::value;
 ``` 
-Holds the size of the specified type pack.
+Calculates the size of the type pack.
 
 ####  end
 ```
-template<typename pack_type>
+template<typename pack>
 struct end; // pack size + 1
 
-template<typename pack_type>
-constexpr size_t end_v = end<pack_type>::value;
+template<typename pack>
+constexpr size_t end_v = end<pack>::value;
 ``` 
-Imitates the end() iterator for type packs. Evaluates to size of the pack + 1.
+Imitates the end() iterator for type packs. Evaluates to the size of the pack + 1.
+
+####  copy_to
+```
+template<typename pack, template<typename...> class dest>
+struct copy_to;
+
+template<typename pack, template<typename...> class dest>
+using copy_to_t = typename copy_to<pack, dest>::type;
+``` 
+Creates a new pack of type 'dest' with the same types as the source pack.
 
 ####  type_at
 ```
-template<typename pack_type, size_t pos>
+template<typename pack, size_t pos>
 struct type_at;
 
-template<typename pack_type, size_t pos>
-using type_at_t = typename type_at<pack_type, pos>::type;
+template<typename pack, size_t pos>
+using type_at_t = typename type_at<pack, pos>::type;
 ``` 
 Gets the type at the specified position. If the position is out of range, a static_assert is triggered.
+
+####  front/back
+```
+template<typename pack>
+using front_t = type_at_t<pack, 0>;
+
+template<typename pack>
+using back_t = type_at_t<pack, end_v<pack> - 1>;
+``` 
+Gets the type at the front/back position.
 
 ####  find_if
 ```
@@ -76,48 +96,71 @@ Constructs an index sequence for types same as the provided type.
 
 ####  has_types
 ```
-template<typename pack_type, typename... types_to_find>
+template<typename pack, typename... types_to_find>
 struct has_types;
 
-template<typename pack_type, typename... types_to_find>
-constexpr bool has_types_v = has_types<pack_type, types_to_find...>::value;
+template<typename pack, typename... types_to_find>
+constexpr bool has_types_v = has_types<pack, types_to_find...>::value;
 ``` 
 Determines whether the specified types are present in the pack.
 
 ####  has_types_no_dup
 ```
-template<typename pack_type, typename... types_to_find>
+template<typename pack, typename... types_to_find>
 struct has_types_no_dup;
 
-template<typename pack_type, typename... types_to_find>
-constexpr bool has_types_no_dup_v = has_types_no_dup<pack_type, types_to_find...>::value;
+template<typename pack, typename... types_to_find>
+constexpr bool has_types_no_dup_v = has_types_no_dup<pack, types_to_find...>::value;
 ``` 
 Determines whether the specified types are present in the pack in O(1) time. Only applicable if there are no duplicates in the pack.
 
-####  add_types_if
+####  append_if
 ```
-template<typename pack_type, typename predicate, typename... types_to_add>
-struct add_types_if;
+template<typename pack, typename predicate, typename... types_to_add>
+struct append_if;
 
-template<typename pack_type, typename predicate, typename... types_to_add>
-using add_types_if_t = typename add_types_if<pack_type, predicate, types_to_add...>::type;
+template<typename pack, typename predicate, typename... types_to_add>
+using append_if_t = typename append_if<pack, predicate, types_to_add...>::type;
 ``` 
 Appends the types that satisfy the predicate's condition to the pack.
 
-####  add_types
+####  append
 ```
-template<typename pack_type, typename... types_to_add>
-using add_types_t = add_types_if_t<pack_type, always, types_to_add...>;
+template<typename pack, typename... types_to_add>
+struct append;
+
+template<typename pack, typename... types_to_add>
+using append_t = typename append<pack, types_to_add...>::type;
 ``` 
-Unconditionally appends the specified types to the pack.
+Appends the types to the pack.
+
+####  prepend_if
+```
+template<typename pack, typename predicate, typename... types_to_add>
+struct prepend_if;
+
+template<typename pack, typename predicate, typename... types_to_add>
+using prepend_if_t = typename prepend_if<pack, predicate, types_to_add...>::type;
+``` 
+Prepends the types that satisfy the predicate's condition to the pack.
+
+####  prepend
+```
+template<typename pack, typename... types_to_add>
+struct prepend;
+
+template<typename pack, typename... types_to_add>
+using prepend_t = typename prepend<pack, types_to_add...>::type;
+``` 
+Prepends the types to the pack.
 
 ####  remove_types_if
 ```
-template<typename pack_type, typename predicate>
+template<typename pack, typename predicate>
 struct remove_types_if;
 
-template<typename pack_type, typename predicate>
-using remove_types_if_t = typename remove_types_if<pack_type, predicate>::type;
+template<typename pack, typename predicate>
+using remove_types_if_t = typename remove_types_if<pack, predicate>::type;
 ``` 
 Removes the types that satisfy the predicate's condition from the pack.
 
@@ -130,11 +173,11 @@ Unconditionally removes the specified types from the pack.
 
 ####  unique
 ```
-template<typename pack_type>
+template<typename pack>
 struct unique;
 
-template<typename pack_type>
-using unique_t = typename unique<pack_type>::type;
+template<typename pack>
+using unique_t = typename unique<pack>::type;
 ``` 
 Creates a new pack with no duplicate types.
 
@@ -173,7 +216,7 @@ struct transform;
 template<typename pack, typename type_predicate>
 using transform_t = typename transform<pack, type_predicate>::type;
 ``` 
-Transform the types in the type pack into types yielded by the type predicate.
+Transforms the types in the type pack into types yielded by the type predicate.
 Placeholders can be used to specialize template type predicates.
 The predicate will be specialized by each type in the pack, so it should not have more that one placeholder.
 The algorightm supports predicate nesting:

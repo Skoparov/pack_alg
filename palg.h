@@ -16,6 +16,9 @@ struct pack_size;
 template<typename pack>
 struct end; // value = size<pack>::value or 1 if pack is empty
 
+template<typename pack, template<typename...> class dest>
+struct copy_to;
+
 template<typename pack, size_t pos>
 struct type_at;
 
@@ -32,7 +35,16 @@ template<typename pack, typename... types>
 struct has_types_no_dup;
 
 template<typename pack, typename predicate, typename... types>
-struct add_types_if;
+struct append_if;
+
+template<typename pack, typename... types>
+struct append;
+
+template<typename pack, typename predicate, typename... types>
+struct prepend_if;
+
+template<typename pack, typename... types>
+struct prepend;
 
 template<typename pack, typename predicate>
 struct remove_types_if; // predicate should have bool 'value' set to true or false
@@ -86,12 +98,24 @@ using none_of_no_dup = not_<any_of_no_dup<types...>>;
 
 template<typename pack>
 constexpr size_t pack_size_v = pack_size<pack>::value;
-
-template<typename pack, size_t pos>
-using type_at_t = typename type_at<pack, pos>::type;
     
 template<typename pack>
 constexpr size_t end_v = end<pack>::value;
+
+template<typename pack, template<typename...> class dest>
+using copy_to_t = typename copy_to<pack, dest>::type;
+
+template<typename pack, size_t pos>
+using type_at_t = typename type_at<pack, pos>::type;
+
+template<typename pack>
+using front_t = type_at_t<pack, 0>;
+
+template<typename pack>
+using back_t = type_at_t<pack, end_v<pack> - 1>;
+
+template<typename pack, typename... types>
+using prepend_t = typename prepend<pack, types...>::type;
 
 template<typename pack, typename predicate, size_t start_pos = 0>
 constexpr size_t find_if_v = find_if<pack, predicate, start_pos>::value;
@@ -112,10 +136,16 @@ template<typename pack, typename... types>
 constexpr bool has_types_no_dup_v = has_types_no_dup<pack, types...>::value;
 
 template<typename pack, typename predicate, typename... types>
-using add_types_if_t = typename add_types_if<pack, predicate, types...>::type;
+using append_if_t = typename append_if<pack, predicate, types...>::type;
 
 template<typename pack, typename... types>
-using add_types_t = add_types_if_t<pack, always, types...>;
+using append_t = typename append<pack, types...>::type;
+
+template<typename pack, typename predicate, typename... types>
+using prepend_if_t = typename prepend_if<pack, predicate, types...>::type;
+
+template<typename pack, typename... types>
+using prepend_t = typename prepend<pack, types...>::type;
 
 template<typename pack, typename predicate>
 using remove_types_if_t = typename remove_types_if<pack, predicate>::type;
@@ -330,6 +360,15 @@ struct end
     static constexpr size_t value{ pack_size_v<pack> ? pack_size_v<pack> : 1 };
 };
 
+// copy_to
+
+
+template<template<typename...> class pack, typename... types, template<typename...> class dest>
+struct copy_to<pack<types...>, dest>
+{
+    using type = dest<types...>;
+};
+
 // type_at
 
 template<
@@ -401,19 +440,51 @@ struct has_types_no_dup<pack<uniq_types...>, types...>
             detail::inherit<uniq_types...>>...> };
 };
 
-// add_types_if
+// append_if
 
 template<
     template<typename...> class pack,
     typename... types,
     typename pred,
     typename... types_to_add>
-struct add_types_if<pack<types...>, pred, types_to_add...>
+struct append_if<pack<types...>, pred, types_to_add...>
 {
     using type = concat_t<pack<types...>, std::conditional_t<
                     detail::eval_v<pred, types_to_add>,
                     pack<types_to_add>,
                     pack<>>...>;
+};
+
+// append
+
+template<template<typename...> class pack, typename... types, typename... types_to_add>
+struct append<pack<types...>, types_to_add...>
+{
+    using type = pack<types..., types_to_add...>;
+};
+
+// prepend_if
+
+template<
+    template<typename...> class pack,
+    typename... types,
+    typename pred,
+    typename... types_to_add>
+struct prepend_if<pack<types...>, pred, types_to_add...>
+{
+    using type = concat_t<std::conditional_t<
+                    detail::eval_v<pred, types_to_add>,
+                    pack<types_to_add>,
+                    pack<>>...,
+                    pack<types...>>;
+};
+
+// prepend
+
+template<template<typename...> class pack, typename... types, typename... types_to_add>
+struct prepend<pack<types...>, types_to_add...>
+{
+    using type = pack<types_to_add..., types...>;
 };
 
 // remove_types_if
