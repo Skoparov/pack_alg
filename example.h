@@ -1,8 +1,6 @@
 #pragma once
 #include "palg.h"
 
-using namespace palg;
-
 struct body_type_related {};
 struct size_related {};
 struct movement_related {};
@@ -19,28 +17,30 @@ struct fat : body_type_related {};
 template<typename... components> struct entity;
 
 template<typename entity_type, typename... components>
-using add_components = unique_t<append_t<entity_type, components...>>;
+using add_components = palg::unique_t<palg::append_t<entity_type, components...>>;
 
 template<typename entity_type, typename predicate>
-using get_components_if = filter_t<entity_type, predicate>;
+using get_components_if = palg::filter_t<entity_type, predicate>;
 
 template<typename... entity_types>
-using combine_all = unique_t<concat_t<entity_types...>>;
+using combine_all = palg::unique_t<palg::concat_t<entity_types...>>;
 
 template<typename entity_type>
-constexpr bool is_flying_v = has_types_no_dup_v<entity_type, flying, lightweight>;
+constexpr bool is_flying_v = palg::has_types_nodup_v<entity_type, flying, lightweight>;
 
 template<typename entity_type>
-constexpr bool is_huge_v = has_types_no_dup_v<entity_type, huge>;
+constexpr bool is_huge_v = palg::has_types_nodup_v<entity_type, huge>;
 
 template<typename entity_type>
-using cripple = remove_types_t<entity_type, speed>;
+using cripple = palg::remove_t<entity_type, speed>;
 
 template<typename entity_type>
-using make_fat = append_t<remove_types_if_t<entity_type, any_of<flying, lightweight>>, fat>;
+using make_fat = palg::append_t<
+    palg::remove_if_t<entity_type, palg::any_of<flying, lightweight>>,
+    fat>;
 
 template<typename entity_type>
-using make_huge = append_t<entity_type, huge>;
+using make_huge = palg::unique_t<palg::append_t<entity_type, huge>>;
 
 template<typename entity_type>
 using make_fat_if_flying = std::conditional_t<
@@ -48,13 +48,13 @@ using make_fat_if_flying = std::conditional_t<
     make_fat<entity_type>,
     entity_type>;
 
-using is_body_type_related = std::is_base_of<body_type_related, _1>;
-using is_size_related = std::is_base_of<size_related, _1>;
+using is_body_type_related = std::is_base_of<body_type_related, palg::_1>;
+using is_size_related = std::is_base_of<size_related, palg::_1>;
 
 template<typename entity>
 using get_body_type_and_size_related = get_components_if<
     entity,
-    or_<is_body_type_related, is_size_related>>;
+    palg::or_<is_body_type_related, is_size_related>>;
 
 //
 

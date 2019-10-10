@@ -5,9 +5,15 @@ using namespace palg;
 
 void test_size()
 {
-    static_assert(pack_size_v<pack<>> == 0);
-    static_assert(pack_size_v<pack<void>> == 1);
-    static_assert(pack_size_v<pack<void, double>> == 2);
+    static_assert(size_v<pack<>> == 0);
+    static_assert(size_v<pack<void>> == 1);
+    static_assert(size_v<pack<void, double>> == 2);
+}
+
+void test_repack()
+{
+    using repacked = repack_t<pack<int, double>, std::is_same>;
+    static_assert(std::is_same_v<repacked, std::is_same<int, double>>);
 }
 
 void test_find()
@@ -46,11 +52,11 @@ void test_has_types()
     static_assert(!has_types_v<pack<int, int>, bool, int>);
     static_assert(!has_types_v<pack<>, bool, int>);
 
-    static_assert(has_types_no_dup_v<pack<bool, void, double>, bool>);
-    static_assert(has_types_no_dup_v<pack<bool, void, double>, bool, void, double>);
-    static_assert(!has_types_no_dup_v<pack<int>, bool>);
-    static_assert(!has_types_no_dup_v<pack<int>, bool, int>);
-    static_assert(!has_types_no_dup_v<pack<>, bool, int>);
+    static_assert(has_types_nodup_v<pack<bool, void, double>, bool>);
+    static_assert(has_types_nodup_v<pack<bool, void, double>, bool, void, double>);
+    static_assert(!has_types_nodup_v<pack<int>, bool>);
+    static_assert(!has_types_nodup_v<pack<int>, bool, int>);
+    static_assert(!has_types_nodup_v<pack<>, bool, int>);
 }
 
 void test_type_at()
@@ -84,6 +90,31 @@ void test_append()
 
     using int_double_pack2 = append_t<pack<>, int, double>;
     static_assert(std::is_same_v<int_double_pack2, pack<int, double>>);
+}
+
+void pop()
+{
+    using pack3 =  pack<int, double, void>;
+
+    static_assert(std::is_same_v<pop_front_n_if_t<pack3, always, 2>, pack<void>>);
+    static_assert(std::is_same_v<pop_front_n_if_t<pack3, never, 2>, pack3>);
+    static_assert(std::is_same_v<pop_front_n_if_t<pack3, always, 0>, pack3>);
+    static_assert(std::is_same_v<pop_front_n_t<pack3, 2>, pack<void>>);
+    static_assert(std::is_same_v<pop_front_n_t<pack3, 0>, pack3>);
+
+    static_assert(std::is_same_v<pop_back_n_if_t<pack3, always, 2>, pack<int>>);
+    static_assert(std::is_same_v<pop_back_n_if_t<pack3, never, 2>, pack3>);
+    static_assert(std::is_same_v<pop_back_n_if_t<pack3, always, 0>, pack3>);
+    static_assert(std::is_same_v<pop_back_n_t<pack3, 2>, pack<int>>);
+    static_assert(std::is_same_v<pop_back_n_t<pack3, 0>, pack3>);
+
+    static_assert(std::is_same_v<pop_front_if_t<pack<int, double>, always>, pack<double>>);
+    static_assert(std::is_same_v<pop_front_if_t<pack<int, double>, never>, pack<int, double>>);
+    static_assert(std::is_same_v<pop_front_t<pack<int, double>>,pack<double>>);
+
+    static_assert(std::is_same_v<pop_back_if_t<pack<int, double>, always>, pack<int>>);
+    static_assert(std::is_same_v<pop_back_if_t<pack<int, double>, never>, pack<int, double>>);
+    static_assert(std::is_same_v<pop_back_t<pack<int, double>>, pack<int>>);
 }
 
 void test_prepend()
@@ -134,24 +165,24 @@ void test_invert()
     static_assert(std::is_same_v<pack<double, void>, pack_double_void>);
 }
 
-void test_remove_types_if()
+void test_remove_if()
 {
-    using empty_pack = remove_types_if_t<pack<>, any_of<int>>;
+    using empty_pack = remove_if_t<pack<>, any_of<int>>;
     static_assert(std::is_same_v<pack<>, empty_pack>);
 
-    using double_pack = remove_types_if_t<pack<int, double>, any_of<int>>;
+    using double_pack = remove_if_t<pack<int, double>, any_of<int>>;
     static_assert(std::is_same_v<double_pack, pack<double>>);
 
-    using empty_pack = remove_types_if_t<pack<int, double>, any_of<int, double>>;
+    using empty_pack = remove_if_t<pack<int, double>, any_of<int, double>>;
     static_assert(std::is_same_v<empty_pack, pack<>>);
 
-    using empty_pack2 = remove_types_if_t<pack<int, double>, std::is_arithmetic<_1>>;
+    using empty_pack2 = remove_if_t<pack<int, double>, std::is_arithmetic<_1>>;
     static_assert(std::is_same_v<empty_pack2, pack<>>);
 
-    using int_double_pack = remove_types_if_t<pack<int, double>, none_of<int, double>>;
+    using int_double_pack = remove_if_t<pack<int, double>, none_of<int, double>>;
     static_assert(std::is_same_v<int_double_pack, pack<int, double>>);
 
-    using empty_pack2 = remove_types_t<pack<int, double>, int, double>;
+    using empty_pack2 = remove_t<pack<int, double>, int, double>;
     static_assert(std::is_same_v<empty_pack2, pack<>>);
 }
 
