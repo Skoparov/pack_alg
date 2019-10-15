@@ -8,13 +8,13 @@ struct pack {};
 ```
 A basic type pack struct provided for convenience.
 
-####  pack
+####  fun
 ```
 template<template<typename...> class pred>
 struct fun;
 ```
 
-A general wrapped for all predicates
+A general wrapper for all predicates
 
 ## Algorithms
 
@@ -302,7 +302,7 @@ Transforms the types in the type pack into types yielded by the type predicate.
 A predicate is a template structure wrapped into fun<> and yielding a value or a type:
 ```
 using is_int = palg::fun<std::is_same>;
-
+```
 Predicates can be combined and modified using the basic logic predicates:
 ```
 using is_pod_class = palg::and_<palg::fun<std::pod>, palg::fun<std::is_class>>;
