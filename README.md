@@ -8,6 +8,14 @@ struct pack {};
 ```
 A basic type pack struct provided for convenience.
 
+####  pack
+```
+template<template<typename...> class pred>
+struct fun;
+```
+
+A general wrapped for all predicates
+
 ## Algorithms
 
 ####  size
@@ -288,102 +296,85 @@ template<typename pack, typename type_predicate>
 using transform_t = typename transform<pack, type_predicate>::type;
 ``` 
 Transforms the types in the type pack into types yielded by the type predicate.
-Placeholders can be used to specialize template type predicates.
-The predicate will be specialized by each type in the pack, so it should not have more that one placeholder.
-The algorightm supports predicate nesting:
-```
-using const_int_pack = transform_t<pack<int>, std::add_pointer<std::add_const<_1>>>; // pack<const int*>
-```
-If the predicate contains a 'type' typedef(like the one above), it will be used as the evaluation result, otherwise the predicate type itself
-will be used, replacing all types in the pack:
-```
-using double_pack = transform_t<pack<int>, double>; // pack<double>
-```
 
 ##  Predicates
 
-A predicate is a template structure fully specialized by types/placeholders and containing a boolean value:
+A predicate is a template structure wrapped into fun<> and yielding a value or a type:
 ```
-using is_int = std::is_same<int, pack_alg::_1>;
+using is_int = palg::fun<std::is_same>;
 
-``` 
-Where pack_alg::_1 is one of the of predefined placeholders:
-```
-using _1 = placeholder;
-using _2 = placeholder;
-using _3 = placeholder;
-using _4 = placeholder;
-using _5 = placeholder;
-```
 Predicates can be combined and modified using the basic logic predicates:
 ```
-using is_pod_class = and_<std::pod<_1>, std::is_class<_1>>;
-using is_not_pod_class = not_<is_pod_class>;
-using is_int_or_double = or_<std::is_same<int, _1>, std::is_same<double, _1>>;
+using is_pod_class = palg::and_<palg::fun<std::pod>, palg::fun<std::is_class>>;
+using is_not_pod_class = palg::not_<is_pod_class>;
+
+template<typename T> struct is_int : std::is_same<int, T> {}; // inheritance is required, using won't work with fun<>
+
+using is_class_or_int = palg::or_<palg::fun<std::is_class>, palg::fun<is_int>>;
 ```
 A predicate can be used with any of the algorithms supporting them, for example:
 ```
-using int_double_pack = filter_t<pack<int, double, void>, is_int_or_double>;
+using int_double_pack = filter_t<pack<int, double, void>, is_class_or_int>;
 ```
 
 The following convenience predicates are predefined:
 ####  always
 ```
-using always = std::true_type;
+using always = ...;
 ``` 
 Always evaluates to true
 
 ####  never
 ```
-using never = std::false_type;
+using never = ...;
 ``` 
 Always evaluates to false
 
 ####  and_
 ```
 template<typename... predicates>
-struct and_;
+using and_ = ...
 ``` 
 Applies ```logical and``` to the results of the specified predicates.
 
 ####  or_
 ```
 template<typename... predicates>
-struct and_;
+using or_ = ...
 ``` 
 Applies ```logical or``` to the results of the specified predicates.
 
 ####  not_
 ```
 template<typename predicate>
-struct not_
+using not_ = ...
 ``` 
 Applies ```logical not``` to the result of the provided predicate.
 
 ####  any_of
 ```
 template<typename... types>
-using any_of = has_types<pack<types...>, _1>;
+using any_of = ...
 ``` 
 Evaluates to true if the predicate is specialized with a type present in the pack.
 
 ####  any_of_no_dup
 ```
 template<typename... types>
-using any_of = has_types<pack<types...>, _1>;
+using any_of = ...
 ``` 
 Same as above, but works in O(1) time. Only applicable if there are no duplicates in the pack.
 
 ####  none_of
 ```
 template<typename... types>
-using none_of = not_<any_of<types...>>;
+using none_of = ...
 ``` 
 Evaluates to false if the predicate is specialized with a type present in the pack.
 
 ####  none_of_no_dup
 ```
 template<typename... types>
-using none_of_no_dup = not_<any_of_no_dup<types...>>;
+using none_of_no_dup = ...
 ``` 
 Same as above, but works in O(1) time. Only applicable if there are no duplicates in the pack.

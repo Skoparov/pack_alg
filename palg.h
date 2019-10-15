@@ -10,6 +10,9 @@ namespace palg {
 template<typename... types>
 struct pack {};
 
+template<template<typename...> class pred>
+struct fun;
+
 // Algorithms
 
 template<typename pack>
@@ -102,38 +105,98 @@ struct invert;
 template<typename pack, typename type_predicate>
 struct transform;
 
+namespace detail {
+
+template<typename pred, typename... types>
+using apply_t = typename pred::template apply<types...>;
+
+template<typename pred, typename... types>
+constexpr bool eval_v{ apply_t<pred, types...>::value };
+
+template<typename pred, typename type>
+using eval_t = typename apply_t<pred, type>::type;
+
+template<typename... preds>
+struct and_p
+{
+    template<typename... types>
+    using pred = std::conjunction<apply_t<preds, types...>...>;
+};
+
+template<typename... preds>
+struct or_p
+{
+    template<typename... types>
+    using pred = std::disjunction<apply_t<preds, types...>...>;
+};
+
+template<typename pred_to_negate>
+struct not_p
+{
+    template<typename... types>
+    using pred = std::negation<apply_t<pred_to_negate, types...>>;
+};
+
+template<typename inner>
+struct type_identity
+{
+    using type = inner;
+};
+
+template<auto val>
+struct value_identity
+{
+    static constexpr auto value{ val };
+};
+
+template<auto val>
+struct eval_to
+{
+    template<typename...>
+    struct pred{ static constexpr auto value{ val }; };
+};
+
+template<typename... types>
+struct inherit : type_identity<types>... {};
+
+template<typename... types>
+struct any_of_p
+{
+    template<typename... type>
+    using pred = has_types<pack<types...>, type...>;
+};
+
+template<typename... types>
+struct any_of_nodup_p
+{
+    template<typename... type>
+    using pred = has_types_nodup<pack<types...>, type...>;
+};
+
+}// detail
+
 // Predicates
 
-struct placeholder;
-using _1 = placeholder;
-using _2 = placeholder;
-using _3 = placeholder;
-using _4 = placeholder;
-using _5 = placeholder;
-
-using always = std::true_type;
-using never = std::false_type;
+using always = fun<detail::eval_to<true>::template pred>;
+using never = fun<detail::eval_to<false>::template pred>;
 
 template<typename... predicates>
-struct and_;
+using and_ = fun<detail::and_p<predicates...>::template pred>;
 
 template<typename... predicates>
-struct or_;
+using or_ = fun<detail::or_p<predicates...>::template pred>;
 
 template<typename predicate>
-struct not_;
+using not_ = fun<detail::not_p<predicate>::template pred>;
 
 template<typename... types>
-using any_of = has_types<pack<types...>, _1>;
+using any_of = fun<detail::any_of_p<types...>::template pred>;
 
 template<typename... types>
-using any_of_nodup = has_types_nodup<pack<types...>, _1>;
+using any_of_nodup = fun<detail::any_of_nodup_p<types...>::template pred>;
 
 template<typename... types>
 using none_of = not_<any_of<types...>>;
-
-template<typename... types>
-using none_of_nodup = not_<any_of_nodup<types...>>;
 
 // Convenience typedefs
 
@@ -227,115 +290,14 @@ using concat_t = typename concat<packs...>::type;
 template<typename pack>
 using invert_t = typename invert<pack>::type;
 
-template<typename pack, typename type_predicate>
-using transform_t = typename transform<pack, type_predicate>::type;
+template<typename pack, typename pred>
+using transform_t = typename transform<pack, pred>::type;
 
 ///////
 // impl
 ///////
 
 namespace detail {
-
-template<
-    template<typename...> class pred,
-    typename types,
-    typename result,
-    typename... args>
-struct with_args;
-
-template<
-    template<typename...> class pred,
-    typename curr, typename... tail,
-    typename... result,
-    typename arg, typename...args>
-struct with_args<pred, pack<curr, tail...>, pack<result...>, arg, args...>
-{
-    using type = typename std::conditional_t<
-        std::is_same_v<curr, placeholder>,
-        with_args<pred, pack<tail...>, pack<result..., arg>, args...>,
-        with_args<pred, pack<tail...>, pack<result..., curr>, arg, args...>>::type;
-};
-
-template<template<typename...> class pred, typename... tail, typename... result>
-struct with_args<pred, pack<tail...>, pack<result...>>
-{
-    using type = pred<result..., tail...>;
-};
-
-template<
-    template<typename...> class pred,
-    typename... result,
-    typename arg, typename... args>
-struct with_args<pred, pack<>, pack<result...>, arg, args...>
-{
-    using type = pred<result...>;
-};
-
-template<template<typename...> class pred, typename types, typename... args>
-using with_args_t = typename with_args<pred, types, pack<>, args...>::type;
-
-template<typename pred, typename... args>
-struct eval_value
-{
-    static constexpr bool value{ pred::value };
-};
-
-template<template<typename...> class pred, typename... types, typename... args>
-struct eval_value<pred<types...>, args...>
-{
-    static constexpr bool value{ with_args_t<pred, pack<types...>, args...>::value };
-};
-
-template<typename... preds, typename... args>
-struct eval_value<and_<preds...>, args...>
-{
-    static constexpr bool value{ std::conjunction_v<eval_value<preds, args...>...> };
-};
-
-template<typename... preds, typename... args>
-struct eval_value<or_<preds...>, args...>
-{
-    static constexpr bool value{ std::disjunction_v<eval_value<preds, args...>...> };
-};
-
-template<typename pred, typename... args>
-struct eval_value<not_<pred>, args...>
-{
-    static constexpr bool value{ !eval_value<pred, args...>::value };
-};
-
-template<typename pred, typename... args>
-constexpr bool eval_v = eval_value<pred, args...>::value;
-
-template<typename regular, typename = void>
-struct extract_type{ using type = regular; };
-
-template<typename pred>
-struct extract_type<pred, std::void_t<typename pred::type>>
-{
-    using type = typename pred::type;
-};
-
-template<typename pred, typename arg>
-struct eval_type
-{
-    using type = std::conditional_t<
-        std::is_same_v<pred, placeholder>,
-        arg,
-        typename extract_type<pred>::type>;
-};
-
-template<template<typename...> class pred, typename... types, typename arg>
-struct eval_type<pred<types...>, arg>
-{
-    using type = typename with_args_t<
-            pred,
-            pack<typename eval_type<types, arg>::type...>,
-            arg>::type;
-};
-
-template<typename pred, typename arg>
-using eval_t = typename eval_type<pred, arg>::type;
 
 struct end_guard;
 
@@ -347,6 +309,25 @@ constexpr size_t find_if(size_t pos, size_t start_pos) noexcept
                 pos :
                 find_if<pred, tail...>(pos + 1, start_pos);
 }
+
+template<typename pred, size_t pos, typename indexes, typename... types>
+struct enumerate_if;
+
+template<typename pred, size_t pos, size_t... indexes, typename curr, typename... types>
+struct enumerate_if<pred, pos, std::index_sequence<indexes...>, curr, types...>
+{
+    using seq = std::conditional_t<eval_v<pred, curr>,
+                        std::index_sequence<indexes..., pos>,
+                        std::index_sequence<indexes...>>;
+
+    using type = typename enumerate_if<pred, pos + 1, seq, types...>::type;
+};
+
+template<typename pred, size_t pos, size_t... indexes>
+struct enumerate_if<pred, pos, std::index_sequence<indexes...>>
+{
+    using type = std::index_sequence<indexes...>;
+};
 
 template<typename pack, typename res, size_t num>
 struct unwrapped_pop_back_n;
@@ -395,41 +376,16 @@ struct unique<pack<>, pack<result_types...>>
     using type = pack<result_types...>;
 };
 
-template<typename pred, size_t pos, typename indexes, typename... types>
-struct enumerate_if;
-
-template<typename pred, size_t pos, size_t... indexes, typename curr, typename... types>
-struct enumerate_if<pred, pos, std::index_sequence<indexes...>, curr, types...>
-{
-    using seq = std::conditional_t<eval_v<pred, curr>,
-                        std::index_sequence<indexes..., pos>,
-                        std::index_sequence<indexes...>>;
-
-    using type = typename enumerate_if<pred, pos + 1, seq, types...>::type;
-};
-
-template<typename pred, size_t pos, size_t... indexes>
-struct enumerate_if<pred, pos, std::index_sequence<indexes...>>
-{
-    using type = std::index_sequence<indexes...>;
-};
-
-template<typename inner>
-struct type_identity
-{
-    using type = inner;
-};
-
-template<auto val>
-struct value_identity
-{
-    static constexpr auto value{ val };
-};
-
-template<typename... types>
-struct inherit : type_identity<types>... {};
-
 }// detail
+
+// fun
+
+template<template<typename...> class pred>
+struct fun
+{
+    template <typename... types>
+    using apply = pred<types...>;
+};
 
 // size
 
@@ -512,11 +468,16 @@ struct find_if<pack<types...>, pred, start_pos>
 
 // find
 
-template<typename pack, typename type, size_t start_pos>
-struct find
+template<
+    template<typename...> class pack,
+    typename... types,
+    typename type,
+    size_t start_pos>
+struct find<pack<types...>, type, start_pos>
 {
     static constexpr size_t value{
-        find_if_v<pack, any_of_nodup<type>, start_pos> };
+        sizeof...(types) > 0?
+        detail::find_if<any_of_nodup<type>, types...>(0, start_pos) : 1 };
 };
 
 // enumerate_if
@@ -620,7 +581,7 @@ struct prepend<pack<types...>, to_add...>
 template<typename pack, typename pred, size_t num>
 struct pop_front_n_if
 {
-    using type = std::conditional_t<pred::value, pop_front_n_t<pack, num>, pack>;
+    using type = std::conditional_t<detail::eval_v<pred>, pop_front_n_t<pack, num>, pack>;
 };
 
 // pop_front_n
@@ -642,7 +603,7 @@ struct pop_front_n<pack, 0>
 template<typename pack, typename pred>
 struct pop_front_if
 {
-    using type = std::conditional_t<pred::value, pop_front_t<pack>, pack>;
+    using type = std::conditional_t<detail::eval_v<pred>, pop_front_t<pack>, pack>;
 };
 
 // pop_front
@@ -658,7 +619,7 @@ struct pop_front<pack<head, tail...>>
 template<typename pack, typename pred, size_t num>
 struct pop_back_n_if
 {
-    using type = std::conditional_t<pred::value, pop_back_n_t<pack, num>, pack>;
+    using type = std::conditional_t<detail::eval_v<pred>, pop_back_n_t<pack, num>, pack>;
 };
 
 // pop_back_n
@@ -756,10 +717,10 @@ struct invert<pack<>>
 
 // transform
 
-template<template<typename...> class pack, typename... types, typename type_pred>
-struct transform<pack<types...>, type_pred>
+template<template<typename...> class pack, typename... types, typename pred>
+struct transform<pack<types...>, pred>
 {
-    using type = pack<detail::eval_t<type_pred, types>...>;
+    using type = pack<detail::eval_t<pred, types>...>;
 };
 
 }// palg
