@@ -113,7 +113,6 @@ void test_prepend()
     static_assert(std::is_same_v<int_double_pack2, pack<int, double>>);
 }
 
-
 void pop()
 {
     using pack3 =  pack<int, double, void>;
@@ -123,6 +122,7 @@ void pop()
     static_assert(std::is_same_v<pop_front_n_if_t<pack3, always, 0>, pack3>);
     static_assert(std::is_same_v<pop_front_n_t<pack3, 2>, pack<void>>);
     static_assert(std::is_same_v<pop_front_n_t<pack3, 0>, pack3>);
+    static_assert(std::is_same_v<pop_front_n_t<pack<>, 0>, pack<>>);
 
     static_assert(std::is_same_v<pop_front_if_t<pack<int, double>, always>, pack<double>>);
     static_assert(std::is_same_v<pop_front_if_t<pack<int, double>, never>, pack<int, double>>);
@@ -133,6 +133,7 @@ void pop()
     static_assert(std::is_same_v<pop_back_n_if_t<pack3, always, 0>, pack3>);
     static_assert(std::is_same_v<pop_back_n_t<pack3, 2>, pack<int>>);
     static_assert(std::is_same_v<pop_back_n_t<pack3, 0>, pack3>);
+    static_assert(std::is_same_v<pop_back_n_t<pack<>, 0>, pack<>>);
 
     static_assert(std::is_same_v<pop_back_if_t<pack<int, double>, always>, pack<int>>);
     static_assert(std::is_same_v<pop_back_if_t<pack<int, double>, never>, pack<int, double>>);
@@ -200,7 +201,7 @@ void test_unique()
 }
 
 template<typename T>
-struct add_const_and_pointer : std::add_pointer<std::add_const_t<T>> {};
+using add_const_and_pointer = std::add_pointer<std::add_const_t<T>>;
 
 void test_transform()
 {

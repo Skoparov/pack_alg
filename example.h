@@ -48,11 +48,11 @@ using make_fat_if_flying = std::conditional_t<
     make_fat<entity_type>,
     entity_type>;
 
-template<typename T>
-struct is_body_type_related : std::is_base_of<body_type_related, T> {};
+template<typename type>
+using is_body_type_related = std::is_base_of<body_type_related, type>;
 
-template<typename T>
-struct is_size_related : std::is_base_of<size_related, T> {};
+template<typename type>
+using is_size_related = std::is_base_of<size_related, type>;
 
 template<typename entity>
 using get_body_type_and_size_related = get_components_if<

@@ -162,15 +162,15 @@ struct inherit : type_identity<types>... {};
 template<typename... types>
 struct any_of_p
 {
-    template<typename... type>
-    using pred = has_types<pack<types...>, type...>;
+    template<typename type>
+    using pred = has_types<pack<types...>, type>;
 };
 
 template<typename... types>
 struct any_of_nodup_p
 {
-    template<typename... type>
-    using pred = has_types_nodup<pack<types...>, type...>;
+    template<typename type>
+    using pred = has_types_nodup<pack<types...>, type>;
 };
 
 }// detail
@@ -201,10 +201,10 @@ using none_of = not_<any_of<types...>>;
 // Convenience typedefs
 
 template<typename pack>
-constexpr size_t size_v = size<pack>::value;
+constexpr size_t size_v{ size<pack>::value };
     
 template<typename pack>
-constexpr size_t end_v = end<pack>::value;
+constexpr size_t end_v{ end<pack>::value };
 
 template<typename pack, template<typename...> class dest>
 using repack_t = typename repack<pack, dest>::type;
@@ -219,10 +219,10 @@ template<typename pack>
 using back_t = typename back<pack>::type;
 
 template<typename pack, typename predicate, size_t start_pos = 0>
-constexpr size_t find_if_v = find_if<pack, predicate, start_pos>::value;
+constexpr size_t find_if_v{ find_if<pack, predicate, start_pos>::value };
 
 template<typename pack, typename type, size_t start_pos = 0>
-constexpr size_t find_v = find<pack, type, start_pos>::value;
+constexpr size_t find_v{ find<pack, type, start_pos>::value };
 
 template<typename pack, typename predicate>
 using enumerate_if_t = typename enumerate_if<pack, predicate>::type;
@@ -231,10 +231,10 @@ template<typename pack, typename type>
 using enumerate_t = typename enumerate<pack, type>::type;
 
 template<typename pack, typename... types>
-constexpr bool has_types_v = has_types<pack, types...>::value;
+constexpr bool has_types_v{ has_types<pack, types...>::value };
 
 template<typename pack, typename... types>
-constexpr bool has_types_nodup_v = has_types_nodup<pack, types...>::value;
+constexpr bool has_types_nodup_v{ has_types_nodup<pack, types...>::value };
 
 template<typename pack, typename predicate, typename... types>
 using append_if_t = typename append_if<pack, predicate, types...>::type;
@@ -299,15 +299,13 @@ using transform_t = typename transform<pack, pred>::type;
 
 namespace detail {
 
-struct end_guard;
+struct guard;
 
-template<typename pred, typename type = end_guard, typename... tail>
+template<typename pred, typename type = guard, typename... tail>
 constexpr size_t find_if(size_t pos, size_t start_pos) noexcept
 {
-    return (pos>= start_pos && eval_v<pred, type>) || 
-            std::is_same_v<type, end_guard> ?
-                pos :
-                find_if<pred, tail...>(pos + 1, start_pos);
+    return ((pos >= start_pos && eval_v<pred, type>) || std::is_same_v<type, guard>) ?
+        pos : find_if<pred, tail...>(pos + 1, start_pos);
 }
 
 template<typename pred, size_t pos, typename indexes, typename... types>
@@ -384,7 +382,7 @@ template<template<typename...> class pred>
 struct fun
 {
     template <typename... types>
-    using apply = pred<types...>;
+    struct apply : pred<types...> {};
 };
 
 // size
@@ -461,6 +459,7 @@ template<
     size_t start_pos>
 struct find_if<pack<types...>, pred, start_pos>
 {
+    static_assert(start_pos <= sizeof...(types), "Position is out of range");
     static constexpr size_t value{ 
         sizeof...(types) > 0?
         detail::find_if<pred, types...>(0, start_pos) : 1 };
@@ -475,6 +474,7 @@ template<
     size_t start_pos>
 struct find<pack<types...>, type, start_pos>
 {
+    static_assert(start_pos <= sizeof...(types), "Position is out of range");
     static constexpr size_t value{
         sizeof...(types) > 0?
         detail::find_if<any_of_nodup<type>, types...>(0, start_pos) : 1 };
@@ -482,10 +482,7 @@ struct find<pack<types...>, type, start_pos>
 
 // enumerate_if
 
-template<
-    template<typename...> class pack,
-    typename... types,
-    typename pred>
+template<template<typename...> class pack, typename... types, typename pred>
 struct enumerate_if<pack<types...>, pred>
 {
     using type = typename detail::enumerate_if<
@@ -567,10 +564,7 @@ struct prepend_if<pack<types...>, pred, types_to_add...>
 
 // prepend
 
-template<
-    template<typename...> class pack,
-    typename... types,
-    typename... to_add>
+template<template<typename...> class pack, typename... types, typename... to_add>
 struct prepend<pack<types...>, to_add...>
 {
     using type = pack<to_add..., types...>;
@@ -635,7 +629,6 @@ struct pop_back_n<pack, 0>
 {
     using type = pack;
 };
-
 
 // pop_back_if
 

@@ -14,7 +14,7 @@ template<template<typename...> class pred>
 struct fun;
 ```
 
-A general wrapped for all predicates
+A general predicate wrapper. All used predicates should be wrapped into this struct.
 
 ## Algorithms
 
@@ -56,7 +56,7 @@ struct type_at;
 template<typename pack, size_t pos>
 using type_at_t = typename type_at<pack, pos>::type;
 ``` 
-Gets the type at the specified position. If the position is out of range, a static_assert is triggered.
+Retrieves the type at the specified position. If the position is out of range, a static_assert is triggered.
 
 ####  front/back
 ```
@@ -72,7 +72,7 @@ struct back;
 template<typename pack>
 using back_t = typename back<pack>::type;
 ``` 
-Gets the type at the first/last position.
+Retrieves the type at the first/last position.
 
 ####  find_if/find
 ```
@@ -299,7 +299,7 @@ Transforms the types in the type pack into types yielded by the type predicate.
 
 ##  Predicates
 
-A predicate is a template structure wrapped into fun<> and yielding a value or a type:
+A predicate is a template structure wrapped into palg::fun<> wrapper and yielding a value or a type:
 ```
 using is_int = palg::fun<std::is_same>;
 
@@ -308,7 +308,8 @@ Predicates can be combined and modified using the basic logic predicates:
 using is_pod_class = palg::and_<palg::fun<std::pod>, palg::fun<std::is_class>>;
 using is_not_pod_class = palg::not_<is_pod_class>;
 
-template<typename T> struct is_int : std::is_same<int, T> {}; // inheritance is required, using won't work with fun<>
+template<typename T> 
+using is_int = std::is_same<int, T>;
 
 using is_class_or_int = palg::or_<palg::fun<std::is_class>, palg::fun<is_int>>;
 ```
