@@ -296,6 +296,24 @@ using transform_t = typename transform<pack, type_predicate>::type;
 ``` 
 Transforms the types in the type pack into types yielded by the type predicate.
 
+####  select
+```
+template<class pack, class select_pred>
+struct select;
+
+template<class pack, class select_pred>
+using select_t = typename select<pack, select_pred>::type;
+
+struct default_select {};
+``` 
+Selects the best fit from the pack based on the provided selection predicate. The predicate should select between two types, for example:
+```
+template<class A, class B>
+struct AlwaysPreferA{ using type = A; };
+``` 
+
+If the pack is empty, detault_select is used as the result.
+
 ##  Predicates
 
 A predicate is a template structure wrapped into palg::fun<> wrapper and yielding a value or a type:

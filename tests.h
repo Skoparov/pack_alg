@@ -242,3 +242,13 @@ void test_predicates()
     static_assert(eval_v<is_numeric_and_pod, int>);
     static_assert(eval_v<not_<is_numeric_and_pod>, void>);
 }
+
+template<class A, class B>
+using max_type = std::conditional<(sizeof(A) > sizeof(B)), A, B>;
+
+void test_select()
+{
+    static_assert(std::is_same_v<select_t<pack<>, fun<max_type>>, default_select>);
+    static_assert(std::is_same_v<select_t<pack<char, int>, fun<max_type>>, int>);
+    static_assert(std::is_same_v<select_t<pack<char, int, double>, fun<max_type>>, double>);
+}

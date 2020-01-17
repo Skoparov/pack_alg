@@ -105,6 +105,11 @@ struct invert;
 template<typename pack, typename type_predicate>
 struct transform;
 
+template<class pack, class select_pred>
+struct select;
+
+struct default_select {};
+
 namespace detail {
 
 template<typename pred, typename... types>
@@ -113,8 +118,8 @@ using apply_t = typename pred::template apply<types...>;
 template<typename pred, typename... types>
 constexpr bool eval_v{ apply_t<pred, types...>::value };
 
-template<typename pred, typename type>
-using eval_t = typename apply_t<pred, type>::type;
+template<typename pred, typename... types>
+using eval_t = typename apply_t<pred, types...>::type;
 
 template<typename... preds>
 struct and_p
@@ -293,6 +298,9 @@ using invert_t = typename invert<pack>::type;
 template<typename pack, typename pred>
 using transform_t = typename transform<pack, pred>::type;
 
+template<class pack, class select_pred>
+using select_t = typename select<pack, select_pred>::type;
+
 ///////
 // impl
 ///////
@@ -372,6 +380,27 @@ template<template<typename...> class pack, typename... result_types>
 struct unique<pack<>, pack<result_types...>>
 {
     using type = pack<result_types...>;
+};
+
+template<class curr_fit, class pred, class... tail>
+struct select;
+
+template<class curr_fit, class pred, class curr, class... tail>
+struct select<curr_fit, pred, curr, tail...>
+{
+    using type = typename select<
+        std::conditional_t<
+            std::is_same_v<curr_fit, default_select>,
+            curr,
+            eval_t<pred, curr_fit, curr>>,
+        pred,
+        tail...>::type;
+};
+
+template<class curr_fit, class pred>
+struct select<curr_fit, pred>
+{
+    using type = curr_fit;
 };
 
 }// detail
@@ -714,6 +743,18 @@ template<template<typename...> class pack, typename... types, typename pred>
 struct transform<pack<types...>, pred>
 {
     using type = pack<detail::eval_t<pred, types>...>;
+};
+
+template<
+    template<typename...> class pack,
+    typename... types,
+    class select_pred>
+struct select<pack<types...>, select_pred>
+{
+    using type = typename detail::select<
+        default_select,
+        select_pred,
+        types...>::type;
 };
 
 }// palg
